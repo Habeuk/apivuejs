@@ -1,0 +1,5 @@
+name: Api vuejs
+type: module
+description: interface entre drupal et vuejs, il permet de generer les formulaires, de gerer les entites post, update and delete.
+package: Custom
+core_version_requirement: ^9 || ^10

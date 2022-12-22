@@ -1,0 +1,15 @@
+apivuejs.example:
+  path: '/apivuejs/example'
+  defaults:
+    _title: 'Example'
+    _controller: '\Drupal\apivuejs\Controller\ApivuejsController::build'
+  requirements:
+    _permission: 'access content'
+
+apivuejs.settings_form:
+  path: '/admin/config/system/apivuejs'
+  defaults:
+    _title: 'Api vuejs settings'
+    _form: 'Drupal\apivuejs\Form\SettingsForm'
+  requirements:
+    _permission: 'administer apivuejs configuration'

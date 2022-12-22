@@ -1,0 +1,4 @@
+administer apivuejs configuration:
+  title: 'Administer apivuejs configuration'
+  description: 'Optional description.'
+  restrict access: true

@@ -1,0 +1,10 @@
+services:
+  apivuejs.event_subscriber:
+    class: Drupal\apivuejs\EventSubscriber\ApivuejsSubscriber
+    arguments: ['@messenger']
+    tags:
+      - { name: event_subscriber }
+  
+  apivuejs.getform:
+    class: Drupal\apivuejs\Services\GenerateForm
+    arguments: []

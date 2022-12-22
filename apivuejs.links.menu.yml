@@ -1,0 +1,6 @@
+apivuejs.settings_form:
+  title: 'Api vuejs'
+  description: 'Configure Api vuejs.'
+  parent: system.admin_config_system
+  route_name: apivuejs.settings_form
+  weight: 10
