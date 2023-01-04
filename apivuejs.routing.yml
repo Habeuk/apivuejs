@@ -1,8 +1,8 @@
-apivuejs.example:
-  path: '/apivuejs/example'
+apivuejs.save.entity:
+  path: '/apivuejs/save-entity/{entity_type_id}'
   defaults:
-    _title: 'Example'
-    _controller: '\Drupal\apivuejs\Controller\ApivuejsController::build'
+    _title: 'save-entity'
+    _controller: '\Drupal\apivuejs\Controller\ApivuejsController::saveEntity'
   requirements:
     _permission: 'access content'
 
