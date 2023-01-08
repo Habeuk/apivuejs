@@ -47,9 +47,9 @@ class GenerateForm extends ControllerBase {
      */
     $EntityStorage = $this->entityTypeManager()->getStorage($entity_type_id);
     if (empty($EntityStorage))
-      throw new \Exception("Le type d'entité n'exsite pas : " . $entity_type_id);
+      throw new \Exception(" Le type d'entité n'exsite pas : " . $entity_type_id);
     if (!$EntityStorage->getEntityType()->getBaseTable())
-      throw new \Exception("Le type d'entité de configuration ne sont pas pris en compte : " . $entity_type_id);
+      throw new \Exception(" Le type d'entité de configuration ne sont pas pris en compte : " . $entity_type_id);
     if (!$entity) {
       if ($bundle && $bundle != $entity_type_id)
         $entity = $EntityStorage->create([
@@ -64,7 +64,7 @@ class GenerateForm extends ControllerBase {
     
     /**
      *
-     * @var EntityFieldManager $entityManager
+     * @var \Drupal\Core\Entity\EntityFieldManager $entityManager
      */
     $entityManager = \Drupal::service('entity_field.manager');
     $Allfields = $entityManager->getFieldDefinitions($entity_type_id, $bundle);
@@ -108,6 +108,17 @@ class GenerateForm extends ControllerBase {
           $field['cardinality'] = $definitionField->getFieldStorageDefinition()->getCardinality();
           $field['constraints'] = $definitionField->getFieldStorageDefinition()->getConstraints();
         }
+        /**
+         * Dans le cas ou on a des données dans allowed_values_function on
+         * recupere ces données et on les passes dans allowed_values.
+         * ( ceci devrait fonctionner pour la pluspart des cas ).
+         *
+         * @see https://drupal.stackexchange.com/questions/294338/how-do-i-get-all-the-options-of-a-field
+         */
+        if (!empty($field['definition_settings']['allowed_values_function'])) {
+          $field['definition_settings']['allowed_values'] = options_allowed_values($definitionField, $entity);
+        }
+        
         $form_sort[] = $field;
         $form[$k] = $field;
       }
@@ -115,8 +126,9 @@ class GenerateForm extends ControllerBase {
     // Trie un tableau par la propriété weight.
     usort($form_sort, '\Drupal\Component\Utility\SortArray::sortByWeightElement');
     return [
-      'form' => $form,
-      'model' => $fields,
+      'form' => $form, // @deprecated à supprimer 2x
+      'model' => $fields, // @deprecated à supprimer 2x
+      'entity' => $fields,
       'form_sort' => $form_sort
     ];
   }
@@ -125,6 +137,7 @@ class GenerateForm extends ControllerBase {
    *
    * @param array $settings
    * @return \Drupal\Core\StringTranslation\TranslatableMarkup
+   * @deprecated à supprimer 2x
    */
   protected function translateConfigField(array $settings) {
     if (!empty($settings['list_options']))
