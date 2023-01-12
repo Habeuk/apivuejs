@@ -68,7 +68,7 @@ class ApivuejsController extends ControllerBase {
         else {
           $entity->save();
           return HttpResponse::response([
-            'id' => $entity->toArray(),
+            'id' => $entity->id(),
             'json' => $entity->toArray()
           ]);
         }
