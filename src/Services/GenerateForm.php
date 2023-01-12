@@ -128,25 +128,11 @@ class GenerateForm extends ControllerBase {
     return [
       'form' => $form, // @deprecated à supprimer 2x
       'model' => $fields, // @deprecated à supprimer 2x
-      'entity' => $fields,
-      'form_sort' => $form_sort
+      'entity' => $fields, // Contient les données qui vont etre MAJ.
+      'form_sort' => $form_sort, // contient les champs rangés.
+      'target_type' => $entity_type_id, // l'id de l'entité.
+      'label' => $entity->label()
     ];
-  }
-  
-  /**
-   *
-   * @param array $settings
-   * @return \Drupal\Core\StringTranslation\TranslatableMarkup
-   * @deprecated à supprimer 2x
-   */
-  protected function translateConfigField(array $settings) {
-    if (!empty($settings['list_options']))
-      foreach ($settings['list_options'] as $k => $val) {
-        $settings['list_options'][$k]['label'] = $this->t($val['label']);
-        if (!empty($val['description']['value']))
-          $settings['list_options'][$k]['description']['value'] = $this->t($val['description']['value']);
-      }
-    return $settings;
   }
   
 }
