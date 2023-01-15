@@ -3,6 +3,7 @@
 namespace Drupal\apivuejs\Services;
 
 use Drupal\Core\Controller\ControllerBase;
+use Drupal\Core\Entity\EntityAccessControlHandler;
 
 /**
  *
@@ -83,6 +84,10 @@ class GenerateForm extends ControllerBase {
     }
     $components = $entity_form_view->getComponents();
     /**
+     * Mise en place de la verification.
+     */
+    $EntityAccessControlHandler = new EntityAccessControlHandler($entity->getEntityType());
+    /**
      *
      * @deprecated ce champs va etre supprimer à l'avenir. il est garder
      *             uniquement afin de reduire le temps de MAJ du code.
@@ -91,7 +96,7 @@ class GenerateForm extends ControllerBase {
     $form = [];
     $form_sort = [];
     foreach ($components as $k => $value) {
-      if (!empty($Allfields[$k])) {
+      if (!empty($Allfields[$k]) && $EntityAccessControlHandler->fieldAccess('edit', $Allfields[$k])) {
         /**
          *
          * @var \Drupal\field\Entity\FieldConfig $definitionField
@@ -107,6 +112,12 @@ class GenerateForm extends ControllerBase {
         if (method_exists($definitionField, 'getFieldStorageDefinition')) {
           $field['cardinality'] = $definitionField->getFieldStorageDefinition()->getCardinality();
           $field['constraints'] = $definitionField->getFieldStorageDefinition()->getConstraints();
+        }
+        // pour le champs image, on a besoin de connaitre le nom du module (ici,
+        // cela correspond à l'entite), cela permet de supprimer le champs au
+        // niveau de file_usage.
+        if ((!empty($field['definition_settings']['handler']) && $field['definition_settings']['handler'] == 'default:file') || (!empty($field['definition_settings']['target_type']) && $field['definition_settings']['target_type'] == 'file')) {
+          $field['definition_settings']['module_name'] = $entity_type_id;
         }
         /**
          * Dans le cas ou on a des données dans allowed_values_function on

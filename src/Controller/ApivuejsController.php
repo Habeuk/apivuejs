@@ -7,34 +7,25 @@ use Stephane888\Debug\ExceptionExtractMessage;
 use Drupal\Component\Serialization\Json;
 use Symfony\Component\HttpFoundation\Request;
 use Stephane888\DrupalUtility\HttpResponse;
+use Drupal\Core\Entity\EntityAccessControlHandler;
+use Drupal\Core\Entity\ContentEntityInterface;
 
 /**
  * Returns responses for Api vuejs routes.
  */
 class ApivuejsController extends ControllerBase {
+  /**
+   *
+   * @var \Drupal\Core\Entity\EntityAccessControlHandler
+   */
+  protected $EntityAccessControlHandler;
   
   /**
-   * Builds the response.
+   * Contient la liste des champs.
+   *
+   * @var array
    */
-  // public function saveEntity(Request $Request, $entity_type_id):
-  // \Symfony\Component\HttpFoundation\JsonResponse {
-  // try {
-  // $defaultValues = Json::decode($Request->getContent());
-  // $entity =
-  // $this->entityTypeManager()->getStorage($entity_type_id)->create($defaultValues);
-  // $entity->save();
-  // return HttpResponse::response([
-  // 'id' => $entity->id(),
-  // 'json' => $entity->toArray()
-  // ]);
-  // }
-  // catch (\Exception $e) {
-  // $this->getLogger('buildercv')->critical($e->getMessage() . '<br>' .
-  // ExceptionExtractMessage::errorAllToString($e));
-  // return HttpResponse::response(ExceptionExtractMessage::errorAll($e), 400,
-  // $e->getMessage());
-  // }
-  // }
+  protected $Allfields = [];
   
   /**
    * Cree les nouveaux entitées et duplique les entites existant.
@@ -44,20 +35,32 @@ class ApivuejsController extends ControllerBase {
    * @return \Symfony\Component\HttpFoundation\JsonResponse
    */
   public function saveEntity(Request $Request, $entity_type_id): \Symfony\Component\HttpFoundation\JsonResponse {
-    $entity_type = $this->entityTypeManager()->getStorage($entity_type_id);
+    $EntityStorage = $this->entityTypeManager()->getStorage($entity_type_id);
     $values = Json::decode($Request->getContent());
     //
-    if ($entity_type && !empty($values)) {
+    if ($EntityStorage && !empty($values)) {
       try {
         /**
          */
-        $entity = $entity_type->create($values);
+        $entity = $EntityStorage->create($values);
         if ($entity->id()) {
-          $OldEntity = $this->entityTypeManager()->getStorage($entity_type_id)->load($entity->id());
+          $OldEntity = $EntityStorage->load($entity->id());
           if (!empty($OldEntity)) {
-            foreach ($values as $k => $value) {
-              $OldEntity->set($k, $value);
+            // on doit controller l'access avant la MAJ pour les champs
+            // de type contentEntity.
+            if ($EntityStorage->getEntityType()->getBaseTable())
+              foreach ($values as $k => $value) {
+                if ($this->checkAccessEditField($OldEntity, $k))
+                  $OldEntity->set($k, $value);
+              }
+            else {
+              // pour les entites de configuration on doit aussi voir si le
+              // control d'access fonctionne ou comment mettre cela en place.
+              foreach ($values as $k => $value) {
+                $OldEntity->set($k, $value);
+              }
             }
+            // save entity after control.
             $OldEntity->save();
             return HttpResponse::response([
               'id' => $OldEntity->id(),
@@ -86,6 +89,33 @@ class ApivuejsController extends ControllerBase {
     else {
       $this->getLogger('buildercv')->critical(" impossible de creer l'entité : " . $entity_type_id);
       return HttpResponse::response([], 400, "erreur inconnu");
+    }
+  }
+  
+  /**
+   *
+   * @param ContentEntityInterface $entity
+   * @param string $fieldname
+   */
+  protected function checkAccessEditField(ContentEntityInterface $entity, $fieldname) {
+    $this->LoadAccessControlFields($entity);
+    if (!empty($this->Allfields[$fieldname])) {
+      return $this->EntityAccessControlHandler->fieldAccess('edit', $this->Allfields[$fieldname]);
+    }
+    return false;
+  }
+  
+  protected function LoadAccessControlFields(ContentEntityInterface $entity) {
+    // Dans le cadre de la MAJ on doit verfier l'access au champs.
+    if (!$this->EntityAccessControlHandler)
+      $this->EntityAccessControlHandler = new EntityAccessControlHandler($entity->getEntityType());
+    /**
+     *
+     * @var \Drupal\Core\Entity\EntityFieldManager $entityManager
+     */
+    if (empty($this->Allfields)) {
+      $entityManager = \Drupal::service('entity_field.manager');
+      $this->Allfields = $entityManager->getFieldDefinitions($entity->getEntityTypeId(), $entity->bundle());
     }
   }
   
