@@ -67,6 +67,15 @@ class ApivuejsController extends ControllerBase {
               'json' => $OldEntity->toArray()
             ]);
           }
+          // cest un nouveau contenu, les ids pour les entities de configuration
+          // sont generalment generer en amont.
+          else {
+            $entity->save();
+            return HttpResponse::response([
+              'id' => $entity->id(),
+              'json' => $entity->toArray()
+            ]);
+          }
         }
         else {
           $entity->save();
