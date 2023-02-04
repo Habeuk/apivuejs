@@ -136,6 +136,16 @@ class GenerateForm extends ControllerBase {
     }
     // Trie un tableau par la propriété weight.
     usort($form_sort, '\Drupal\Component\Utility\SortArray::sortByWeightElement');
+    // traitement des champs de layout_builder__layout. ( ces champs ne sont pas
+    // traiter ici pour le moment ).
+    /**
+     * Error signaler.
+     * ( il faudra trouver une autre approche ).
+     *
+     * @var \Drupal\vuejs_entity\Services\DuplicateEntityReference $duplicate
+     */
+    // $duplicate = \Drupal::service('vuejs_entity.duplicate.entity');
+    // $duplicate->toArrayLayoutBuilderField($fields);
     return [
       'form' => $form, // @deprecated à supprimer 2x
       'model' => $fields, // @deprecated à supprimer 2x

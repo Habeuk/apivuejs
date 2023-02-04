@@ -9,6 +9,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Stephane888\DrupalUtility\HttpResponse;
 use Drupal\Core\Entity\EntityAccessControlHandler;
 use Drupal\Core\Entity\ContentEntityInterface;
+use Drupal\layout_builder\Section;
 
 /**
  * Returns responses for Api vuejs routes.
@@ -37,6 +38,8 @@ class ApivuejsController extends ControllerBase {
   public function saveEntity(Request $Request, $entity_type_id): \Symfony\Component\HttpFoundation\JsonResponse {
     $EntityStorage = $this->entityTypeManager()->getStorage($entity_type_id);
     $values = Json::decode($Request->getContent());
+    $this->getLayoutBuilderField($values);
+    
     //
     if ($EntityStorage && !empty($values)) {
       try {
@@ -98,6 +101,20 @@ class ApivuejsController extends ControllerBase {
     else {
       $this->getLogger('buildercv')->critical(" impossible de creer l'entité : " . $entity_type_id);
       return HttpResponse::response([], 400, "erreur inconnu");
+    }
+  }
+  
+  protected function getLayoutBuilderField(array &$entity) {
+    if (!empty($entity['layout_builder__layout'])) {
+      foreach ($entity['layout_builder__layout'] as $i => $sections) {
+        foreach ($sections as $s => $section) {
+          /**
+           *
+           * @var \Drupal\layout_builder\Section $section
+           */
+          $entity['layout_builder__layout'][$i][$s] = Section::fromArray($section);
+        }
+      }
     }
   }
   
