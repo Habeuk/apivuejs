@@ -61,7 +61,13 @@ class GenerateForm extends ControllerBase {
         $entity = $EntityStorage->create();
       }
     }
-    $fields = $entity->toArray();
+    // on doit charger les données en fonction de la langue encours.
+    $lang_code = \Drupal::languageManager()->getCurrentLanguage()->getId();
+    if ($entity->hasTranslation($lang_code)) {
+      $fields = $entity->getTranslation($lang_code)->toArray();
+    }
+    else
+      $fields = $entity->toArray();
     
     /**
      *

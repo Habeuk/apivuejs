@@ -29,7 +29,7 @@ class ApivuejsController extends ControllerBase {
   protected $Allfields = [];
   
   /**
-   * Cree les nouveaux entitées et duplique les entites existant.
+   * Cree les nouveaux entitées et dupliqué les entites existant.
    *
    * @param Request $Request
    * @param string $entity_type_id
@@ -44,10 +44,23 @@ class ApivuejsController extends ControllerBase {
     if ($EntityStorage && !empty($values)) {
       try {
         /**
+         * --
+         *
+         * @var \Drupal\Core\Entity\EntityInterface $entity
          */
         $entity = $EntityStorage->create($values);
         if ($entity->id()) {
+          /**
+           *
+           * @var ContentEntityInterface $OldEntity
+           */
           $OldEntity = $EntityStorage->load($entity->id());
+          // on doit charger les données en fonction de la langue encours.
+          $lang_code = \Drupal::languageManager()->getCurrentLanguage()->getId();
+          if ($OldEntity->hasTranslation($lang_code)) {
+            $OldEntity = $OldEntity->getTranslation($lang_code);
+          }
+          
           if (!empty($OldEntity)) {
             // on doit controller l'access avant la MAJ pour les champs
             // de type contentEntity.
