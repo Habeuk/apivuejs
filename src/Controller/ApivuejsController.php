@@ -55,20 +55,22 @@ class ApivuejsController extends ControllerBase {
            * @var ContentEntityInterface $OldEntity
            */
           $OldEntity = $EntityStorage->load($entity->id());
-          // on doit charger les données en fonction de la langue encours.
-          $lang_code = \Drupal::languageManager()->getCurrentLanguage()->getId();
-          if ($OldEntity->hasTranslation($lang_code)) {
-            $OldEntity = $OldEntity->getTranslation($lang_code);
-          }
           
           if (!empty($OldEntity)) {
             // on doit controller l'access avant la MAJ pour les champs
             // de type contentEntity.
-            if ($EntityStorage->getEntityType()->getBaseTable())
+            if ($EntityStorage->getEntityType()->getBaseTable()) {
+              // On doit charger les données en fonction de la langue encours.
+              $lang_code = \Drupal::languageManager()->getCurrentLanguage()->getId();
+              if ($OldEntity->hasTranslation($lang_code)) {
+                $OldEntity = $OldEntity->getTranslation($lang_code);
+              }
+              //
               foreach ($values as $k => $value) {
                 if ($this->checkAccessEditField($OldEntity, $k))
                   $OldEntity->set($k, $value);
               }
+            }
             else {
               // pour les entites de configuration on doit aussi voir si le
               // control d'access fonctionne ou comment mettre cela en place.
