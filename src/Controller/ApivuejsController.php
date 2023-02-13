@@ -85,8 +85,8 @@ class ApivuejsController extends ControllerBase {
               'json' => $OldEntity->toArray()
             ]);
           }
-          // cest un nouveau contenu, les ids pour les entities de configuration
-          // sont generalment generer en amont.
+          // cest un nouveau contenu, ( les ids pour les entities de
+          // configuration sont generalment generer en amont ).
           else {
             $entity->save();
             return HttpResponse::response([
@@ -96,6 +96,12 @@ class ApivuejsController extends ControllerBase {
           }
         }
         else {
+          // pour les nouveaux contenus, s'ils ont été generé à partir d'une
+          // autre langue, il faut mettre à jour le valeur default_langcode
+          if (isset($values['default_langcode'][0]['value']) && $values['default_langcode'][0]['value'] == 0) {
+            $values['default_langcode'][0]['value'] = 1;
+            $entity = $EntityStorage->create($values);
+          }
           $entity->save();
           return HttpResponse::response([
             'id' => $entity->id(),
