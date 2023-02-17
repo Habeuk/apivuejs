@@ -64,10 +64,10 @@ class GenerateForm extends ControllerBase {
     // on doit charger les données en fonction de la langue encours.
     $lang_code = \Drupal::languageManager()->getCurrentLanguage()->getId();
     if ($entity->hasTranslation($lang_code)) {
-      $fields = $entity->getTranslation($lang_code)->toArray();
+      $entity = $entity->getTranslation($lang_code);
     }
-    else
-      $fields = $entity->toArray();
+    
+    $fields = $entity->toArray();
     
     /**
      *
@@ -115,6 +115,10 @@ class GenerateForm extends ControllerBase {
           'cardinality' => 1
         ] + $value;
         $field['definition_settings'] = $definitionField->getSettings();
+        // if ($k == 'field_competences') {
+        // dump($field);
+        // dump($definitionField->getSettings());
+        // }
         if (method_exists($definitionField, 'getFieldStorageDefinition')) {
           $field['cardinality'] = $definitionField->getFieldStorageDefinition()->getCardinality();
           $field['constraints'] = $definitionField->getFieldStorageDefinition()->getConstraints();
@@ -153,8 +157,8 @@ class GenerateForm extends ControllerBase {
     // $duplicate = \Drupal::service('vuejs_entity.duplicate.entity');
     // $duplicate->toArrayLayoutBuilderField($fields);
     return [
-      'form' => $form, // @deprecated à supprimer 2x
-      'model' => $fields, // @deprecated à supprimer 2x
+      // 'form' => $form, // @deprecated à supprimer 2x
+      // 'model' => $fields, // @deprecated à supprimer 2x
       'entity' => $fields, // Contient les données qui vont etre MAJ.
       'form_sort' => $form_sort, // contient les champs rangés.
       'target_type' => $entity_type_id, // l'id de l'entité.
