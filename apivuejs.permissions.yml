@@ -2,3 +2,8 @@ administer apivuejs configuration:
   title: 'Administer apivuejs configuration'
   description: 'Optional description.'
   restrict access: true
+  
+edit-create apivuejs entities:
+  title: 'Edit, create, duplicate apivuejs entities'
+  description: 'Optional description.'
+  restrict access: true

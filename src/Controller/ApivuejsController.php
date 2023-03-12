@@ -3,13 +3,17 @@
 namespace Drupal\apivuejs\Controller;
 
 use Drupal\Core\Controller\ControllerBase;
-use Stephane888\Debug\ExceptionExtractMessage;
 use Drupal\Component\Serialization\Json;
 use Symfony\Component\HttpFoundation\Request;
-use Stephane888\DrupalUtility\HttpResponse;
 use Drupal\Core\Entity\EntityAccessControlHandler;
 use Drupal\Core\Entity\ContentEntityInterface;
+use Symfony\Component\DependencyInjection\ContainerInterface;
 use Drupal\layout_builder\Section;
+use Stephane888\Debug\ExceptionDebug;
+use Stephane888\DrupalUtility\HttpResponse;
+use Stephane888\Debug\ExceptionExtractMessage;
+use Drupal\apivuejs\Services\DuplicateEntityReference;
+use Drupal\apivuejs\Services\GenerateForm;
 
 /**
  * Returns responses for Api vuejs routes.
@@ -22,11 +26,36 @@ class ApivuejsController extends ControllerBase {
   protected $EntityAccessControlHandler;
   
   /**
+   *
+   * @var \Drupal\apivuejs\Services\GenerateForm
+   */
+  protected $GenerateForm;
+  
+  /**
    * Contient la liste des champs.
    *
    * @var array
    */
   protected $Allfields = [];
+  
+  /**
+   *
+   * @var DuplicateEntityReference
+   */
+  protected $DuplicateEntityReference;
+  
+  public function __construct(DuplicateEntityReference $DuplicateEntityReference, GenerateForm $GenerateForm) {
+    $this->DuplicateEntityReference = $DuplicateEntityReference;
+    $this->GenerateForm = $GenerateForm;
+  }
+  
+  /**
+   *
+   * {@inheritdoc}
+   */
+  public static function create(ContainerInterface $container) {
+    return new static($container->get('apivuejs.duplicate_reference'), $container->get('apivuejs.getform'));
+  }
   
   /**
    * Cree les nouveaux entitées et dupliqué les entites existant.
@@ -125,6 +154,17 @@ class ApivuejsController extends ControllerBase {
     }
   }
   
+  /**
+   * Drupal pour le moment a opter de ne pas exposer les données de layouts
+   * builder, car ce dernier utilise le format json et un ya quelques probleme
+   * de logique ou conception.
+   * Pour remedier à cela, on opte de fournir le nessaire pour son import en
+   * attendant la reponse de drupal.
+   *
+   * @see https://www.drupal.org/project/drupal/issues/2942975
+   *
+   * @param array $entity
+   */
   protected function getLayoutBuilderField(array &$entity) {
     if (!empty($entity['layout_builder__layout'])) {
       foreach ($entity['layout_builder__layout'] as $i => $sections) {
@@ -166,14 +206,138 @@ class ApivuejsController extends ControllerBase {
     }
   }
   
+  public function EntittiDelete(Request $Request) {
+    try {
+      $param = Json::decode($Request->getContent());
+      if (empty($param['id']) || empty($param['entity_type_id']))
+        throw new ExceptionDebug(" Paramettre manquant ");
+      $entity = $this->entityTypeManager()->getStorage($param['entity_type_id'])->load($param['id']);
+      if ($entity) {
+        $entity->delete();
+        return HttpResponse::response([]);
+      }
+      throw new ExceptionDebug(" L'entité n'existe plus ");
+    }
+    catch (ExceptionDebug $e) {
+      return HttpResponse::response(ExceptionExtractMessage::errorAll($e), $e->getErrorCode(), $e->getMessage());
+    }
+    catch (\Exception $e) {
+      return HttpResponse::response(ExceptionExtractMessage::errorAll($e), 431, $e->getMessage());
+    }
+    catch (\Error $e) {
+      return HttpResponse::response(ExceptionExtractMessage::errorAll($e), 431, $e->getMessage());
+    }
+  }
+  
   /**
-   * Permet de generer un tableau multi-dimentionnelle permettant de creer le
+   * Generer une structure qui permet d'editer ou de dupliquer une entite via
+   * vuejs.
+   *
+   * @param Request $Request
+   * @throws ExceptionDebug
+   * @return \Symfony\Component\HttpFoundation\JsonResponse
+   */
+  function getFormByEntityId(Request $Request) {
+    try {
+      $param = Json::decode($Request->getContent());
+      if (empty($param['id']) || empty($param['entity_type_id']))
+        throw new ExceptionDebug(" Paramettre manquant ");
+      //
+      
+      $entity = $this->entityTypeManager()->getStorage($param['entity_type_id'])->load($param['id']);
+      $duplicate = false;
+      if ($entity) {
+        if (!empty($param['duplicate'])) {
+          $entity = $entity->createDuplicate();
+          $duplicate = true;
+        }
+        $res = [];
+        $res[] = $this->generateFormMatrice($param['entity_type_id'], $entity, $entity->bundle(), $duplicate);
+        return HttpResponse::response($res);
+      }
+      throw new ExceptionDebug(" L'entité n'existe plus ");
+    }
+    catch (ExceptionDebug $e) {
+      return HttpResponse::response(ExceptionExtractMessage::errorAll($e), $e->getErrorCode(), $e->getMessage());
+    }
+    catch (\Exception $e) {
+      return HttpResponse::response(ExceptionExtractMessage::errorAll($e), 431, $e->getMessage());
+    }
+    catch (\Error $e) {
+      return HttpResponse::response(ExceptionExtractMessage::errorAll($e), 431, $e->getMessage());
+    }
+  }
+  
+  /**
+   * Generer une structure qui permet de creer une nouvelle entity via vuejs.
+   * Cette entité peut ausi etre creer à partir du type d'entité.
+   * NB: renvoit les données uniquement pour les
+   * Drupal\Core\Entity\ContentEntityBase, pour les
+   * Drupal\Core\Config\Entity\ConfigEntityBundleBase voir
+   */
+  public function getContentEntityForm($entity_type_id, $bundle = null, $view_mode = 'default') {
+    try {
+      /**
+       *
+       * @var \Drupal\Core\Config\Entity\ConfigEntityStorage $EntityStorage
+       */
+      $EntityStorage = $this->entityTypeManager()->getStorage($entity_type_id);
+      // On determine si c'est un entity de configuration ou une entité de
+      // contenu.
+      // pour le moment, on peut differencier l'un de l'autre via la table de
+      // base, seul les entités de contenus ont une table de base.
+      /**
+       *
+       * @var \Drupal\Core\Config\Entity\ConfigEntityType $entityT
+       */
+      $entityT = $EntityStorage->getEntityType();
+      if (!$entityT->getBaseTable()) {
+        $entity_type_id = $entityT->getBundleOf();
+        $EntityStorage = $this->entityTypeManager()->getStorage($entity_type_id);
+      }
+      if (empty($EntityStorage))
+        throw new \Exception("Le type d'entité n'exsite pas : " . $entity_type_id);
+      
+      if ($bundle && $bundle != $entity_type_id)
+        $entity = $EntityStorage->create([
+          'type' => $bundle
+        ]);
+      else {
+        $bundle = $entity_type_id;
+        $entity = $EntityStorage->create();
+      }
+      $res = [];
+      $res[] = $this->generateFormMatrice($entity_type_id, $entity, $bundle);
+      return HttpResponse::response($res);
+    }
+    catch (\Exception $e) {
+      return HttpResponse::response(ExceptionExtractMessage::errorAll($e), 400, $e->getMessage());
+    }
+    catch (\Error $e) {
+      return HttpResponse::response(ExceptionExtractMessage::errorAll($e), 400, $e->getMessage());
+    }
+  }
+  
+  /**
+   * * Permet de generer un tableau multi-dimentionnelle permettant de creer le
    * contenus de maniere recursive.
    * Cela permet de creer un enssemble de contenu sans pour autant surcharger
    * les ressources.
+   *
+   * @param string $entity_type_id
+   * @param string $bundle
+   * @param string $view_mode
+   * @param \Drupal\Core\Entity\ContentEntityBase $entity
    */
-  public function generateFormMatrice() {
-    //
+  protected function generateFormMatrice($entity_type_id, \Drupal\Core\Entity\ContentEntityBase $entity, $bundle, $duplicate = false, $add_form = true, $view_mode = 'default') {
+    $form = $this->GenerateForm->getForm($entity_type_id, $bundle, $view_mode, $entity);
+    // Ajout de la configuration des champs layout_builder__layout. ( il faudra
+    // completer l'issue ).
+    $this->DuplicateEntityReference->toArrayLayoutBuilderField($form['entity']);
+    $entities = [];
+    $this->DuplicateEntityReference->duplicateExistantReference($entity, $entities, $duplicate, $add_form);
+    $form['entities'] = $entities;
+    return $form;
   }
   
 }

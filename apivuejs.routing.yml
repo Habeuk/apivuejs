@@ -1,10 +1,45 @@
 apivuejs.save.entity:
   path: '/apivuejs/save-entity/{entity_type_id}'
+  methods: [POST]
   defaults:
     _title: 'save-entity'
     _controller: '\Drupal\apivuejs\Controller\ApivuejsController::saveEntity'
   requirements:
-    _permission: 'access content'
+    _permission: 'edit-create apivuejs entities'
+  options:
+      _auth: ['basic_auth', 'cookie']
+    
+apivuejs.edit_duplicate.entity:
+  path: '/apivuejs/edit-duplicate-entity'
+  methods: [POST]
+  defaults:
+    _title: 'Edit or duplicate entities'
+    _controller: '\Drupal\apivuejs\Controller\ApivuejsController::getFormByEntityId'
+  requirements:
+    _permission: 'edit-create apivuejs entities'
+  options:
+      _auth: ['basic_auth', 'cookie']
+      
+apivuejs.edit.delete:
+  path: '/apivuejs/entity-delete'
+  methods: [POST]
+  defaults:
+    _title: 'Delete entities'
+    _controller: '\Drupal\apivuejs\Controller\ApivuejsController::EntittiDelete'
+  requirements:
+    _permission: 'Edit-create apivuejs entities'
+  options:
+      _auth: ['basic_auth', 'cookie']
+    
+apivuejs.add.entity:
+  path: '/apivuejs/add-entity/{entity_type_id}/{bundle}/{view_mode}'
+  defaults:
+    _title: 'Add entities'
+    _controller: '\Drupal\apivuejs\Controller\ApivuejsController::getContentEntityForm'
+  requirements:
+    _permission: 'edit-create apivuejs entities'
+  options:
+      _auth: ['basic_auth', 'cookie']
 
 apivuejs.settings_form:
   path: '/admin/config/system/apivuejs'

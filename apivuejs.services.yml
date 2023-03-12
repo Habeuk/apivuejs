@@ -8,3 +8,7 @@ services:
   apivuejs.getform:
     class: Drupal\apivuejs\Services\GenerateForm
     arguments: []
+    
+  apivuejs.duplicate_reference:
+    class: Drupal\apivuejs\Services\DuplicateEntityReference
+    arguments: ['@apivuejs.getform']
