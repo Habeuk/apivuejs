@@ -243,7 +243,6 @@ class ApivuejsController extends ControllerBase {
       if (empty($param['id']) || empty($param['entity_type_id']))
         throw new ExceptionDebug(" Paramettre manquant ");
       //
-      
       $entity = $this->entityTypeManager()->getStorage($param['entity_type_id'])->load($param['id']);
       $duplicate = false;
       if ($entity) {

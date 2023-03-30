@@ -149,6 +149,15 @@ class DuplicateEntityReference extends ControllerBase {
         if (empty($setings['target_type']) || in_array($setings['target_type'], $this->ignorEntity))
           continue;
         // Duplication des paragraph
+        /**
+         * La duplication de paragraphe ajoute une duplication de l'entité à
+         * dupliquer.
+         * => la struture du champs contient en plus une entré "entity"
+         * Donc, on a [{target_id:null, entity:
+         * \Drupal\paragraphs\Entity\Paragraph}],
+         * On a chosit de regler ce probleme via le js, qui doit vider le champs
+         * et ajouter les nouveaux ids.
+         */
         elseif (!empty($setings['target_type']) && $setings['target_type'] == 'paragraph') {
           foreach ($vals as $value) {
             $Paragraph = Paragraph::load($value['target_id']);
@@ -162,7 +171,6 @@ class DuplicateEntityReference extends ControllerBase {
               }
               else
                 $CloneParagraph = $Paragraph;
-              //
               
               $subDatas = $setings;
               $subDatas['target_id'] = $value['target_id'];
@@ -174,7 +182,8 @@ class DuplicateEntityReference extends ControllerBase {
                 $subDatas += $this->GenerateForm->getForm($setings['target_type'], $CloneParagraph->bundle(), 'default', $CloneParagraph);
               }
               // On verifie pour les sous entites.
-              $this->duplicateExistantReference($CloneParagraph, $subDatas['entities'], $duplicate, $add_form);
+              // ( on duplique à partir de l'original ).
+              $this->duplicateExistantReference($Paragraph, $subDatas['entities'], $duplicate, $add_form);
               $datasJson[$k][] = $subDatas;
             }
           }
@@ -205,7 +214,7 @@ class DuplicateEntityReference extends ControllerBase {
                 $subDatas += $this->GenerateForm->getForm($setings['target_type'], $cloneNode->bundle(), 'default', $cloneNode);
               }
               // On verifie pour les sous entites.
-              $this->duplicateExistantReference($cloneNode, $subDatas['entities'], $duplicate, $add_form);
+              $this->duplicateExistantReference($node, $subDatas['entities'], $duplicate, $add_form);
               $datasJson[$k][] = $subDatas;
             }
           }
@@ -235,12 +244,12 @@ class DuplicateEntityReference extends ControllerBase {
                 $subDatas += $this->GenerateForm->getForm($setings['target_type'], $cloneBlocksContents->bundle(), 'default', $cloneBlocksContents);
               }
               // On verifie pour les sous entites.
-              $this->duplicateExistantReference($cloneBlocksContents, $subDatas['entities'], $duplicate, $add_form);
+              $this->duplicateExistantReference($BlocksContents, $subDatas['entities'], $duplicate, $add_form);
               $datasJson[$k][] = $subDatas;
             }
           }
         }
-        // Duplications des formulaires.
+        // Duplication des formulaires.
         elseif (!empty($setings['target_type']) && $setings['target_type'] == 'webform') {
           foreach ($vals as $value) {
             $Webform = \Drupal\webform\Entity\Webform::load($value['target_id']);
@@ -425,7 +434,7 @@ class DuplicateEntityReference extends ControllerBase {
                 $subDatas += $this->GenerateForm->getForm($setings['target_type'], $CloneProduct->bundle(), 'default', $CloneProduct);
               }
               // On verifie pour les sous entites.
-              $this->duplicateExistantReference($CloneProduct, $subDatas['entities'], $duplicate, $add_form);
+              $this->duplicateExistantReference($Product, $subDatas['entities'], $duplicate, $add_form);
               $datasJson[$k][] = $subDatas;
               //
               // $newProducts[] = [
@@ -465,7 +474,6 @@ class DuplicateEntityReference extends ControllerBase {
                * On duplique ou ajoute le formulaire pour les entites
                * importantes.
                */
-              //
               $datasJson[$k][] = $subDatas;
             }
           }
