@@ -82,12 +82,29 @@ class GenerateForm extends ControllerBase {
      * @var \Drupal\Core\Entity\Entity\EntityFormDisplay $entity_form_view
      */
     $entity_form_view = $this->entityTypeManager()->getStorage('entity_form_display')->load($entity_type_id . '.' . $bundle . '.' . $view_mode);
+    /**
+     * Si l'affichage n'existe pas, on le cree.
+     */
+    if (empty($entity_form_view)) {
+      // en s'inpirant de :
+      // \Drupal\Core\Entity\Entity\EntityFormDisplay::collectRenderDisplay
+      $values = [
+        'targetEntityType' => $entity_type_id,
+        'bundle' => $bundle,
+        'mode' => $view_mode,
+        'status' => TRUE
+      ];
+      $entity_form_view = \Drupal\Core\Entity\Entity\EntityFormDisplay::create($values);
+      $entity_form_view->save();
+    }
+    
     if (!$entity_form_view) {
       $entity_form_view = $this->entityTypeManager()->getStorage('entity_form_display')->create([
         'bundle' => $bundle,
         'targetEntityType' => $entity_type_id
       ]);
     }
+    
     $components = $entity_form_view->getComponents();
     /**
      * Mise en place de la verification.

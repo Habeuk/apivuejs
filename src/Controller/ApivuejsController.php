@@ -209,11 +209,43 @@ class ApivuejsController extends ControllerBase {
   public function EntittiDelete(Request $Request) {
     try {
       $param = Json::decode($Request->getContent());
-      if (empty($param['id']) || empty($param['entity_type_id']))
-        throw new ExceptionDebug(" Paramettre manquant ");
+      if (empty($param['id']) || empty($param['entity_type_id']) || !isset($param['delete_subentities']))
+        throw ExceptionDebug::exception(" Paramettre manquant ");
+      /**
+       *
+       * @var \Drupal\Core\Entity\EntityInterface $entity
+       */
       $entity = $this->entityTypeManager()->getStorage($param['entity_type_id'])->load($param['id']);
       if ($entity) {
-        $entity->delete();
+        // on verifie si c'est une entite de configuration
+        if ($entity->getEntityType()->getBaseTable()) {
+          $entity->delete();
+        }
+        else {
+          $query = $this->entityTypeManager()->getStorage($entity->getEntityType()->getBundleOf())->getQuery();
+          $query->condition('type', $param['id']);
+          $nbre = $query->count()->execute();
+          if ($nbre) {
+            if (!$param['delete_subentities']) {
+              // throw new \Exception("L'entité contient de elements");
+              throw ExceptionDebug::exception("L'entité contient de elements, veillez supprimer ces derniers");
+              // throw new \LogicException("L'entité contient de elements,
+              // veillez supprimer ces derniers");
+            }
+            else {
+              $storage_handler = $this->entityTypeManager()->getStorage($entity->getEntityType()->getBundleOf());
+              $entities = $storage_handler->loadByProperties([
+                "type" => $param['id']
+              ]);
+              $storage_handler->delete($entities);
+              //
+              $entity->delete();
+            }
+          }
+          else {
+            $entity->delete();
+          }
+        }
         return HttpResponse::response([]);
       }
       throw new ExceptionDebug(" L'entité n'existe plus ");
@@ -222,10 +254,10 @@ class ApivuejsController extends ControllerBase {
       return HttpResponse::response(ExceptionExtractMessage::errorAll($e), $e->getErrorCode(), $e->getMessage());
     }
     catch (\Exception $e) {
-      return HttpResponse::response(ExceptionExtractMessage::errorAll($e), 431, $e->getMessage());
+      return HttpResponse::response(ExceptionExtractMessage::errorAll($e), 432, $e->getMessage());
     }
     catch (\Error $e) {
-      return HttpResponse::response(ExceptionExtractMessage::errorAll($e), 431, $e->getMessage());
+      return HttpResponse::response(ExceptionExtractMessage::errorAll($e), 432, $e->getMessage());
     }
   }
   
