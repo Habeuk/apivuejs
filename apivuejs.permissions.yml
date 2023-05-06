@@ -4,6 +4,6 @@ administer apivuejs configuration:
   restrict access: true
   
 edit-create apivuejs entities:
-  title: 'Edit, create, duplicate apivuejs entities'
+  title: 'Edit, create, delete, duplicate apivuejs entities'
   description: 'Optional description.'
   restrict access: true

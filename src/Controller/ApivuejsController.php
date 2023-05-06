@@ -207,6 +207,7 @@ class ApivuejsController extends ControllerBase {
   }
   
   public function EntittiDelete(Request $Request) {
+    return HttpResponse::response([]);
     try {
       $param = Json::decode($Request->getContent());
       if (empty($param['id']) || empty($param['entity_type_id']) || !isset($param['delete_subentities']))
@@ -217,7 +218,9 @@ class ApivuejsController extends ControllerBase {
        */
       $entity = $this->entityTypeManager()->getStorage($param['entity_type_id'])->load($param['id']);
       if ($entity) {
-        // on verifie si c'est une entite de configuration
+        /**
+         * on verifie si c'est une entite de configuration ou pas.
+         */
         if ($entity->getEntityType()->getBaseTable()) {
           $entity->delete();
         }
