@@ -131,6 +131,33 @@ class ApivuejsController extends ControllerBase {
             $values['default_langcode'][0]['value'] = 1;
             $entity = $EntityStorage->create($values);
           }
+          
+          /**
+           * La sauvegarde brute n'est pas toujours adapté, car les données
+           * peuvent etre dans un format incompable.
+           * Examaple le champs date: peut etre etre integrer avec un varchar,
+           * integer, un date ...
+           * Mais on a pas de solution pour le moment.( donc au front bien
+           * formater les données.
+           */
+          // $entity = $EntityStorage->create($values);
+          // on doit controller l'access avant la MAJ pour les champs
+          // de type contentEntity.
+          // if ($EntityStorage->getEntityType()->getBaseTable()) {
+          // // on verifie l'acces et on MAJ les données avec set.
+          // foreach ($values as $k => $value) {
+          // if ($this->checkAccessEditField($entity, $k))
+          // $entity->set($k, $value);
+          // }
+          // }
+          // else {
+          // // pour les entites de configuration on doit aussi voir si le
+          // // control d'access fonctionne ou comment mettre cela en place.
+          // foreach ($values as $k => $value) {
+          // $entity->set($k, $value);
+          // }
+          // }
+          
           $entity->save();
           return HttpResponse::response([
             'id' => $entity->id(),
@@ -207,7 +234,6 @@ class ApivuejsController extends ControllerBase {
   }
   
   public function EntittiDelete(Request $Request) {
-    return HttpResponse::response([]);
     try {
       $param = Json::decode($Request->getContent());
       if (empty($param['id']) || empty($param['entity_type_id']) || !isset($param['delete_subentities']))
@@ -249,7 +275,10 @@ class ApivuejsController extends ControllerBase {
             $entity->delete();
           }
         }
-        return HttpResponse::response([]);
+        return HttpResponse::response([
+          'has deleted' => $param['id'],
+          'entity_type_id' => $param['entity_type_id']
+        ]);
       }
       throw new ExceptionDebug(" L'entité n'existe plus ");
     }
