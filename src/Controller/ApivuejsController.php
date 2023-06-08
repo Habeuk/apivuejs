@@ -68,7 +68,6 @@ class ApivuejsController extends ControllerBase {
     $EntityStorage = $this->entityTypeManager()->getStorage($entity_type_id);
     $values = Json::decode($Request->getContent());
     $this->getLayoutBuilderField($values);
-    
     //
     if ($EntityStorage && !empty($values)) {
       try {
@@ -126,7 +125,7 @@ class ApivuejsController extends ControllerBase {
         }
         else {
           // pour les nouveaux contenus, s'ils ont été generé à partir d'une
-          // autre langue, il faut mettre à jour le valeur default_langcode
+          // autre langue, il faut mettre à jour la valeur default_langcode
           if (isset($values['default_langcode'][0]['value']) && $values['default_langcode'][0]['value'] == 0) {
             $values['default_langcode'][0]['value'] = 1;
             $entity = $EntityStorage->create($values);
@@ -138,7 +137,7 @@ class ApivuejsController extends ControllerBase {
            * Examaple le champs date: peut etre etre integrer avec un varchar,
            * integer, un date ...
            * Mais on a pas de solution pour le moment.( donc au front bien
-           * formater les données.
+           * formater les données).
            */
           // $entity = $EntityStorage->create($values);
           // on doit controller l'access avant la MAJ pour les champs
@@ -172,12 +171,36 @@ class ApivuejsController extends ControllerBase {
         $errors .= '<br> current user id : ' . $user->id();
         $errors .= ExceptionExtractMessage::errorAllToString($e);
         $this->getLogger('buildercv')->critical($e->getMessage() . '<br>' . $errors);
-        return HttpResponse::response(ExceptionExtractMessage::errorAll($e), 400, $e->getMessage());
+        return HttpResponse::response(ExceptionExtractMessage::errorAll($e), 435, $e->getMessage());
       }
     }
     else {
-      $this->getLogger('buildercv')->critical(" impossible de creer l'entité : " . $entity_type_id);
-      return HttpResponse::response([], 400, "erreur inconnu");
+      $this->getLogger('apivuejs')->critical(" impossible de creer l'entité : " . $entity_type_id);
+      return HttpResponse::response([], 435, "erreur inconnu");
+    }
+  }
+  
+  /**
+   * Permet de compter le nombre d'entrées d'une entité données et en function
+   * des paramettres tramsis.
+   *
+   * @param Request $Request
+   * @param string $entity_type_id
+   */
+  public function countEntities(Request $Request, $entity_type_id) {
+    try {
+      $query = $this->entityTypeManager()->getStorage($entity_type_id)->getQuery();
+      $values = Json::decode($Request->getContent());
+      if (!empty($values['and'])) {
+        foreach ($values['and'] as $filter) {
+          $query->condition($filter['field'], $filter['operator'], $filter['value']);
+        }
+      }
+      $ids = $query->execute();
+      return HttpResponse::response($ids);
+    }
+    catch (\Error $e) {
+      return HttpResponse::response(ExceptionExtractMessage::errorAll($e), 435, "erreur inconnu");
     }
   }
   
@@ -338,13 +361,20 @@ class ApivuejsController extends ControllerBase {
    * Drupal\Core\Entity\ContentEntityBase, pour les
    * Drupal\Core\Config\Entity\ConfigEntityBundleBase voir
    */
-  public function getContentEntityForm($entity_type_id, $bundle = null, $view_mode = 'default') {
+  public function getContentEntityForm(Request $Request, $entity_type_id, $bundle = null, $view_mode = 'default') {
     try {
+      $param = Json::decode($Request->getContent());
+      if (empty($param)) {
+        $param = [];
+      }
       /**
        *
        * @var \Drupal\Core\Config\Entity\ConfigEntityStorage $EntityStorage
        */
       $EntityStorage = $this->entityTypeManager()->getStorage($entity_type_id);
+      
+      if (empty($EntityStorage))
+        throw new \Exception("Le type d'entité n'exsite pas : " . $entity_type_id);
       // On determine si c'est un entity de configuration ou une entité de
       // contenu.
       // pour le moment, on peut differencier l'un de l'autre via la table de
@@ -354,30 +384,29 @@ class ApivuejsController extends ControllerBase {
        * @var \Drupal\Core\Config\Entity\ConfigEntityType $entityT
        */
       $entityT = $EntityStorage->getEntityType();
+      
       if (!$entityT->getBaseTable()) {
         $entity_type_id = $entityT->getBundleOf();
         $EntityStorage = $this->entityTypeManager()->getStorage($entity_type_id);
       }
-      if (empty($EntityStorage))
-        throw new \Exception("Le type d'entité n'exsite pas : " . $entity_type_id);
       
-      if ($bundle && $bundle != $entity_type_id)
-        $entity = $EntityStorage->create([
-          'type' => $bundle
-        ]);
+      if ($bundle && $bundle != $entity_type_id) {
+        $param['type'] = $bundle;
+        $entity = $EntityStorage->create($param);
+      }
       else {
         $bundle = $entity_type_id;
-        $entity = $EntityStorage->create();
+        $entity = $EntityStorage->create($param);
       }
-      $res = [];
+      // $res = [];
       $res[] = $this->generateFormMatrice($entity_type_id, $entity, $bundle);
       return HttpResponse::response($res);
     }
     catch (\Exception $e) {
-      return HttpResponse::response(ExceptionExtractMessage::errorAll($e), 400, $e->getMessage());
+      return HttpResponse::response(ExceptionExtractMessage::errorAll($e), 435, $e->getMessage());
     }
     catch (\Error $e) {
-      return HttpResponse::response(ExceptionExtractMessage::errorAll($e), 400, $e->getMessage());
+      return HttpResponse::response(ExceptionExtractMessage::errorAll($e), 435, $e->getMessage());
     }
   }
   

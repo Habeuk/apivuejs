@@ -8,7 +8,18 @@ apivuejs.save.entity:
     _permission: 'edit-create apivuejs entities'
   options:
       _auth: ['basic_auth', 'cookie']
-    
+
+apivuejs.count_entities:
+  path: '/apivuejs/count-entities/{entity_type_id}'
+  methods: [POST]
+  defaults:
+    _title: 'Count entities'
+    _controller: '\Drupal\apivuejs\Controller\ApivuejsController::countEntities'
+  requirements:
+    _permission: 'edit-create apivuejs entities'
+  options:
+      _auth: ['basic_auth', 'cookie']
+          
 apivuejs.edit_duplicate.entity:
   path: '/apivuejs/edit-duplicate-entity'
   methods: [POST]
@@ -48,3 +59,6 @@ apivuejs.settings_form:
     _form: 'Drupal\apivuejs\Form\SettingsForm'
   requirements:
     _permission: 'administer apivuejs configuration'
+    
+    
+    

@@ -147,6 +147,18 @@ class GenerateForm extends ControllerBase {
           $field['definition_settings']['module_name'] = $entity_type_id;
         }
         /**
+         * Pour recuperer les données via JONAPI, on a besoin de connaitre le
+         * type d'entité, information que drupal ne fournit pas.
+         * On va ajouter cette information dans 'bundle_entity_type_id'
+         */
+        if (!empty($field['definition_settings']['target_type'])) {
+          $id = $entity->get($k)->target_id;
+          if ($id) {
+            $ReferenceEntity = $this->entityTypeManager()->getStorage($field['definition_settings']['target_type'])->load($id);
+            $field['definition_settings']['bundle_entity_type_id'] = $ReferenceEntity->bundle();
+          }
+        }
+        /**
          * Dans le cas ou on a des données dans allowed_values_function on
          * recupere ces données et on les passes dans allowed_values.
          * ( ceci devrait fonctionner pour la pluspart des cas ).
@@ -162,6 +174,7 @@ class GenerateForm extends ControllerBase {
       }
     }
     // Trie un tableau par la propriété weight.
+    
     usort($form_sort, '\Drupal\Component\Utility\SortArray::sortByWeightElement');
     // traitement des champs de layout_builder__layout. ( ces champs ne sont pas
     // traiter ici pour le moment ).
