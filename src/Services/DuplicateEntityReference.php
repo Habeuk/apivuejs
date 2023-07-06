@@ -200,6 +200,8 @@ class DuplicateEntityReference extends ControllerBase {
                 if (self::$field_domain_access && $cloneNode->hasField(self::$field_domain_access) && $entity->hasField(self::$field_domain_access)) {
                   $cloneNode->set(self::$field_domain_access, $entity->get(self::$field_domain_access)->getValue());
                 }
+                // on met à jour l'id de lutilisateur.
+                $cloneNode->setOwnerId($uid);
               }
               else
                 $cloneNode = $node;
@@ -231,6 +233,8 @@ class DuplicateEntityReference extends ControllerBase {
                 if (self::$field_domain_access && $cloneBlocksContents->hasField(self::$field_domain_access) && $entity->hasField(self::$field_domain_access)) {
                   $cloneBlocksContents->set(self::$field_domain_access, $entity->get(self::$field_domain_access)->getValue());
                 }
+                // on met à jour l'id de lutilisateur.
+                $cloneBlocksContents->setOwnerId($uid);
               }
               else
                 $cloneBlocksContents = $BlocksContents;
@@ -423,6 +427,8 @@ class DuplicateEntityReference extends ControllerBase {
                   if ($dmn)
                     $CloneProduct->set(self::$field_domain_access, $dmn);
                 }
+                // on met à jour l'id de lutilisateur.
+                $CloneProduct->setOwnerId($uid);
               }
               else
                 $CloneProduct = $Product;
@@ -516,7 +522,6 @@ class DuplicateEntityReference extends ControllerBase {
       // On met jour la date de MAJ
       $CloneProduct->setCreatedTime(time());
       $CloneProduct->setChangedTime(time());
-      $CloneProduct->setOwnerId($uid);
       // On supprime les variations dans le clone, car il
       // appartiennent
       // au produit precedent.
@@ -551,6 +556,9 @@ class DuplicateEntityReference extends ControllerBase {
             if (self::$field_domain_access && $cloneVariation->hasField(self::$field_domain_access) && $CloneProduct->hasField(self::$field_domain_access)) {
               $cloneVariation->set(self::$field_domain_access, $CloneProduct->get(self::$field_domain_access)->getValue());
             }
+            // on met à jour l'id de lutilisateur.
+            $cloneVariation->setOwnerId($uid);
+            //
             $cloneVariation->save();
             $newVariations[] = $cloneVariation->id();
             // Ajout de la variations dans le formulaire

@@ -79,6 +79,27 @@ class ApivuejsController extends ControllerBase {
         $entity = $EntityStorage->create($values);
         if ($entity->id()) {
           /**
+           * Pour la maj il faut verifier l'access à l'entité.
+           *
+           * @see https://www.drupal.org/docs/drupal-apis/entity-api/working-with-the-entity-api#s-checking-if-a-user-account-has-access-to-an-entity-object
+           */
+          /**
+           *
+           * @var Boolean | \Drupal\Core\Access\AccessResultInterface
+           *      $accessResult
+           */
+          $accessResult = $entity->access('update');
+          if ($accessResult !== true) {
+            if ($accessResult === false) {
+              throw new ExceptionDebug(" Vous n'avez pas les autorisations necessaire :: false ");
+            }
+            elseif ($accessResult instanceof \Drupal\Core\Access\AccessResultInterface) {
+              if ($accessResult->isForbidden()) {
+                throw new ExceptionDebug(" Vous n'avez pas les autorisations necessaire ");
+              }
+            }
+          }
+          /**
            *
            * @var ContentEntityInterface $OldEntity
            */
@@ -123,6 +144,10 @@ class ApivuejsController extends ControllerBase {
             ]);
           }
         }
+        /**
+         * NB, on soihaite que la creation de contenu soit aussi rapide que
+         * possible.
+         */
         else {
           // pour les nouveaux contenus, s'ils ont été generé à partir d'une
           // autre langue, il faut mettre à jour la valeur default_langcode
@@ -165,12 +190,12 @@ class ApivuejsController extends ControllerBase {
         }
         throw new \Exception("Erreur d'execution");
       }
+      catch (ExceptionDebug $e) {
+        $this->getLogger('apivuejs')->critical(ExceptionExtractMessage::errorAllToString($e));
+        return HttpResponse::response(ExceptionExtractMessage::errorAll($e), $e->getErrorCode(), $e->getMessage());
+      }
       catch (\Exception $e) {
-        $user = \Drupal::currentUser();
-        $errors = '<br> error create : ' . $entity_type_id;
-        $errors .= '<br> current user id : ' . $user->id();
-        $errors .= ExceptionExtractMessage::errorAllToString($e);
-        $this->getLogger('buildercv')->critical($e->getMessage() . '<br>' . $errors);
+        $this->getLogger('apivuejs')->critical(ExceptionExtractMessage::errorAllToString($e));
         return HttpResponse::response(ExceptionExtractMessage::errorAll($e), 435, $e->getMessage());
       }
     }
@@ -332,7 +357,29 @@ class ApivuejsController extends ControllerBase {
       //
       $entity = $this->entityTypeManager()->getStorage($param['entity_type_id'])->load($param['id']);
       $duplicate = false;
+      
       if ($entity) {
+        /**
+         * Pour la maj il faut verifier l'access à l'entité.
+         *
+         * @see https://www.drupal.org/docs/drupal-apis/entity-api/working-with-the-entity-api#s-checking-if-a-user-account-has-access-to-an-entity-object
+         */
+        /**
+         *
+         * @var Boolean | \Drupal\Core\Access\AccessResultInterface
+         *      $accessResult
+         */
+        $accessResult = $entity->access('update');
+        if ($accessResult !== true) {
+          if ($accessResult === false) {
+            throw new ExceptionDebug(" Vous n'avez pas les autorisations necessaire :: false ");
+          }
+          elseif ($accessResult instanceof \Drupal\Core\Access\AccessResultInterface) {
+            if ($accessResult->isForbidden()) {
+              throw new ExceptionDebug(" Vous n'avez pas les autorisations necessaire ");
+            }
+          }
+        }
         if (!empty($param['duplicate'])) {
           $entity = $entity->createDuplicate();
           $duplicate = true;
