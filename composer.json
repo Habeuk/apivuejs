@@ -1,5 +1,5 @@
 {
-    "name": "stephane888/apivuejs",
+    "name": "habeuk/apivuejs",
     "description": "permet de gerer les formulaires drupal par vuejs",
     "type": "drupal-module-custom",
     "license": "MIT",
