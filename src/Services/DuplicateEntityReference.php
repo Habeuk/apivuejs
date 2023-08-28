@@ -514,7 +514,6 @@ class DuplicateEntityReference extends ControllerBase {
    * @param ContentEntityBase $CloneProduct
    * @param Boolean $duplicate
    * @param int $uid
-   * @param array $value
    * @param array $subDatas
    */
   function duplicateProduct(ContentEntityBase $Product, ContentEntityBase $CloneProduct, bool $duplicate, int $uid, array &$subDatas = []) {
@@ -619,5 +618,4 @@ class DuplicateEntityReference extends ControllerBase {
   function saveDuplicateEntities(ContentEntityBase &$entity, array &$datasJson = []) {
     //
   }
-  
 }

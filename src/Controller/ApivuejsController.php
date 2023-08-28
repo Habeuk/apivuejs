@@ -24,31 +24,31 @@ class ApivuejsController extends ControllerBase {
    * @var \Drupal\Core\Entity\EntityAccessControlHandler
    */
   protected $EntityAccessControlHandler;
-  
+
   /**
    *
    * @var \Drupal\apivuejs\Services\GenerateForm
    */
   protected $GenerateForm;
-  
+
   /**
    * Contient la liste des champs.
    *
    * @var array
    */
   protected $Allfields = [];
-  
+
   /**
    *
    * @var DuplicateEntityReference
    */
   protected $DuplicateEntityReference;
-  
+
   public function __construct(DuplicateEntityReference $DuplicateEntityReference, GenerateForm $GenerateForm) {
     $this->DuplicateEntityReference = $DuplicateEntityReference;
     $this->GenerateForm = $GenerateForm;
   }
-  
+
   /**
    *
    * {@inheritdoc}
@@ -56,7 +56,7 @@ class ApivuejsController extends ControllerBase {
   public static function create(ContainerInterface $container) {
     return new static($container->get('apivuejs.duplicate_reference'), $container->get('apivuejs.getform'));
   }
-  
+
   /**
    * Cree les nouveaux entitées et dupliqué les entites existant.
    *
@@ -92,8 +92,7 @@ class ApivuejsController extends ControllerBase {
           if ($accessResult !== true) {
             if ($accessResult === false) {
               throw new ExceptionDebug(" Vous n'avez pas les autorisations necessaire :: false ");
-            }
-            elseif ($accessResult instanceof \Drupal\Core\Access\AccessResultInterface) {
+            } elseif ($accessResult instanceof \Drupal\Core\Access\AccessResultInterface) {
               if ($accessResult->isForbidden()) {
                 throw new ExceptionDebug(" Vous n'avez pas les autorisations necessaire ");
               }
@@ -104,8 +103,8 @@ class ApivuejsController extends ControllerBase {
            * @var ContentEntityInterface $OldEntity
            */
           $OldEntity = $EntityStorage->load($entity->id());
-          
-          if (!empty($OldEntity)) {
+
+          if ($OldEntity) {
             // on doit controller l'access avant la MAJ pour les champs
             // de type contentEntity.
             if ($EntityStorage->getEntityType()->getBaseTable()) {
@@ -119,8 +118,7 @@ class ApivuejsController extends ControllerBase {
                 if ($this->checkAccessEditField($OldEntity, $k))
                   $OldEntity->set($k, $value);
               }
-            }
-            else {
+            } else {
               // pour les entites de configuration on doit aussi voir si le
               // control d'access fonctionne ou comment mettre cela en place.
               foreach ($values as $k => $value) {
@@ -155,7 +153,7 @@ class ApivuejsController extends ControllerBase {
             $values['default_langcode'][0]['value'] = 1;
             $entity = $EntityStorage->create($values);
           }
-          
+
           /**
            * La sauvegarde brute n'est pas toujours adapté, car les données
            * peuvent etre dans un format incompable.
@@ -181,7 +179,7 @@ class ApivuejsController extends ControllerBase {
           // $entity->set($k, $value);
           // }
           // }
-          
+
           $entity->save();
           return HttpResponse::response([
             'id' => $entity->id(),
@@ -189,22 +187,19 @@ class ApivuejsController extends ControllerBase {
           ]);
         }
         throw new \Exception("Erreur d'execution");
-      }
-      catch (ExceptionDebug $e) {
+      } catch (ExceptionDebug $e) {
         $this->getLogger('apivuejs')->critical(ExceptionExtractMessage::errorAllToString($e));
         return HttpResponse::response(ExceptionExtractMessage::errorAll($e), $e->getErrorCode(), $e->getMessage());
-      }
-      catch (\Exception $e) {
+      } catch (\Exception $e) {
         $this->getLogger('apivuejs')->critical(ExceptionExtractMessage::errorAllToString($e));
         return HttpResponse::response(ExceptionExtractMessage::errorAll($e), 435, $e->getMessage());
       }
-    }
-    else {
+    } else {
       $this->getLogger('apivuejs')->critical(" impossible de creer l'entité : " . $entity_type_id);
       return HttpResponse::response([], 435, "erreur inconnu");
     }
   }
-  
+
   /**
    * Permet de compter le nombre d'entrées d'une entité données et en function
    * des paramettres tramsis.
@@ -223,12 +218,11 @@ class ApivuejsController extends ControllerBase {
       }
       $ids = $query->execute();
       return HttpResponse::response($ids);
-    }
-    catch (\Error $e) {
+    } catch (\Error $e) {
       return HttpResponse::response(ExceptionExtractMessage::errorAll($e), 435, "erreur inconnu");
     }
   }
-  
+
   /**
    * Drupal pour le moment a opter de ne pas exposer les données de layouts
    * builder, car ce dernier utilise le format json et un ya quelques probleme
@@ -253,7 +247,7 @@ class ApivuejsController extends ControllerBase {
       }
     }
   }
-  
+
   /**
    *
    * @param ContentEntityInterface $entity
@@ -266,21 +260,21 @@ class ApivuejsController extends ControllerBase {
     }
     return false;
   }
-  
+
   protected function LoadAccessControlFields(ContentEntityInterface $entity) {
     // Dans le cadre de la MAJ on doit verfier l'access au champs.
     if (!$this->EntityAccessControlHandler)
       $this->EntityAccessControlHandler = new EntityAccessControlHandler($entity->getEntityType());
-    /**
-     *
-     * @var \Drupal\Core\Entity\EntityFieldManager $entityManager
-     */
     if (empty($this->Allfields)) {
+      /**
+       *
+       * @var \Drupal\Core\Entity\EntityFieldManager $entityManager
+       */
       $entityManager = \Drupal::service('entity_field.manager');
       $this->Allfields = $entityManager->getFieldDefinitions($entity->getEntityTypeId(), $entity->bundle());
     }
   }
-  
+
   public function EntittiDelete(Request $Request) {
     try {
       $param = Json::decode($Request->getContent());
@@ -297,8 +291,7 @@ class ApivuejsController extends ControllerBase {
          */
         if ($entity->getEntityType()->getBaseTable()) {
           $entity->delete();
-        }
-        else {
+        } else {
           $query = $this->entityTypeManager()->getStorage($entity->getEntityType()->getBundleOf())->getQuery();
           $query->condition('type', $param['id']);
           $nbre = $query->count()->execute();
@@ -308,8 +301,7 @@ class ApivuejsController extends ControllerBase {
               throw ExceptionDebug::exception("L'entité contient de elements, veillez supprimer ces derniers");
               // throw new \LogicException("L'entité contient de elements,
               // veillez supprimer ces derniers");
-            }
-            else {
+            } else {
               $storage_handler = $this->entityTypeManager()->getStorage($entity->getEntityType()->getBundleOf());
               $entities = $storage_handler->loadByProperties([
                 "type" => $param['id']
@@ -318,8 +310,7 @@ class ApivuejsController extends ControllerBase {
               //
               $entity->delete();
             }
-          }
-          else {
+          } else {
             $entity->delete();
           }
         }
@@ -329,18 +320,15 @@ class ApivuejsController extends ControllerBase {
         ]);
       }
       throw new ExceptionDebug(" L'entité n'existe plus ");
-    }
-    catch (ExceptionDebug $e) {
+    } catch (ExceptionDebug $e) {
       return HttpResponse::response(ExceptionExtractMessage::errorAll($e), $e->getErrorCode(), $e->getMessage());
-    }
-    catch (\Exception $e) {
+    } catch (\Exception $e) {
       return HttpResponse::response(ExceptionExtractMessage::errorAll($e), 432, $e->getMessage());
-    }
-    catch (\Error $e) {
+    } catch (\Error $e) {
       return HttpResponse::response(ExceptionExtractMessage::errorAll($e), 432, $e->getMessage());
     }
   }
-  
+
   /**
    * Generer une structure qui permet d'editer ou de dupliquer une entite via
    * vuejs.
@@ -357,7 +345,7 @@ class ApivuejsController extends ControllerBase {
       //
       $entity = $this->entityTypeManager()->getStorage($param['entity_type_id'])->load($param['id']);
       $duplicate = false;
-      
+
       if ($entity) {
         /**
          * Pour la maj il faut verifier l'access à l'entité.
@@ -373,8 +361,7 @@ class ApivuejsController extends ControllerBase {
         if ($accessResult !== true) {
           if ($accessResult === false) {
             throw new ExceptionDebug(" Vous n'avez pas les autorisations necessaire :: false ");
-          }
-          elseif ($accessResult instanceof \Drupal\Core\Access\AccessResultInterface) {
+          } elseif ($accessResult instanceof \Drupal\Core\Access\AccessResultInterface) {
             if ($accessResult->isForbidden()) {
               throw new ExceptionDebug(" Vous n'avez pas les autorisations necessaire ");
             }
@@ -389,18 +376,15 @@ class ApivuejsController extends ControllerBase {
         return HttpResponse::response($res);
       }
       throw new ExceptionDebug(" L'entité n'existe plus ");
-    }
-    catch (ExceptionDebug $e) {
+    } catch (ExceptionDebug $e) {
       return HttpResponse::response(ExceptionExtractMessage::errorAll($e), $e->getErrorCode(), $e->getMessage());
-    }
-    catch (\Exception $e) {
+    } catch (\Exception $e) {
       return HttpResponse::response(ExceptionExtractMessage::errorAll($e), 431, $e->getMessage());
-    }
-    catch (\Error $e) {
+    } catch (\Error $e) {
       return HttpResponse::response(ExceptionExtractMessage::errorAll($e), 431, $e->getMessage());
     }
   }
-  
+
   /**
    * Generer une structure qui permet de creer une nouvelle entity via vuejs.
    * Cette entité peut ausi etre creer à partir du type d'entité.
@@ -419,8 +403,8 @@ class ApivuejsController extends ControllerBase {
        * @var \Drupal\Core\Config\Entity\ConfigEntityStorage $EntityStorage
        */
       $EntityStorage = $this->entityTypeManager()->getStorage($entity_type_id);
-      
-      if (empty($EntityStorage))
+
+      if (!$EntityStorage)
         throw new \Exception("Le type d'entité n'exsite pas : " . $entity_type_id);
       // On determine si c'est un entity de configuration ou une entité de
       // contenu.
@@ -431,32 +415,29 @@ class ApivuejsController extends ControllerBase {
        * @var \Drupal\Core\Config\Entity\ConfigEntityType $entityT
        */
       $entityT = $EntityStorage->getEntityType();
-      
+
       if (!$entityT->getBaseTable()) {
         $entity_type_id = $entityT->getBundleOf();
         $EntityStorage = $this->entityTypeManager()->getStorage($entity_type_id);
       }
-      
+
       if ($bundle && $bundle != $entity_type_id) {
         $param['type'] = $bundle;
         $entity = $EntityStorage->create($param);
-      }
-      else {
+      } else {
         $bundle = $entity_type_id;
         $entity = $EntityStorage->create($param);
       }
       // $res = [];
       $res[] = $this->generateFormMatrice($entity_type_id, $entity, $bundle);
       return HttpResponse::response($res);
-    }
-    catch (\Exception $e) {
+    } catch (\Exception $e) {
       return HttpResponse::response(ExceptionExtractMessage::errorAll($e), 435, $e->getMessage());
-    }
-    catch (\Error $e) {
+    } catch (\Error $e) {
       return HttpResponse::response(ExceptionExtractMessage::errorAll($e), 435, $e->getMessage());
     }
   }
-  
+
   /**
    * * Permet de generer un tableau multi-dimentionnelle permettant de creer le
    * contenus de maniere recursive.
@@ -478,5 +459,4 @@ class ApivuejsController extends ControllerBase {
     $form['entities'] = $entities;
     return $form;
   }
-  
 }
