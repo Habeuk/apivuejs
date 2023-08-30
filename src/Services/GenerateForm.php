@@ -47,7 +47,7 @@ class GenerateForm extends ControllerBase {
      * @var \Drupal\Core\Config\Entity\ConfigEntityStorage $EntityStorage
      */
     $EntityStorage = $this->entityTypeManager()->getStorage($entity_type_id);
-    if (empty($EntityStorage))
+    if (!$EntityStorage)
       throw new \Exception(" Le type d'entité n'exsite pas : " . $entity_type_id);
     if (!$EntityStorage->getEntityType()->getBaseTable())
       throw new \Exception(" Le type d'entité de configuration ne sont pas pris en compte : " . $entity_type_id);
@@ -85,7 +85,7 @@ class GenerateForm extends ControllerBase {
     /**
      * Si l'affichage n'existe pas, on le cree.
      */
-    if (empty($entity_form_view)) {
+    if (!$entity_form_view) {
       // en s'inpirant de :
       // \Drupal\Core\Entity\Entity\EntityFormDisplay::collectRenderDisplay
       $values = [
