@@ -35,7 +35,7 @@ class ApivuejsSubscriber implements EventSubscriberInterface {
   /**
    * Kernel request event handler.
    *
-   * @param \Symfony\Component\HttpKernel\Event\GetResponseEvent $event
+   * @param \Symfony\Component\HttpKernel\Event\RequestEvent $event
    *        Response event.
    */
   public function onKernelRequest(RequestEvent $event) {
@@ -45,7 +45,7 @@ class ApivuejsSubscriber implements EventSubscriberInterface {
   /**
    * Kernel response event handler.
    *
-   * @param \Symfony\Component\HttpKernel\Event\FilterResponseEvent $event
+   * @param \Symfony\Component\HttpKernel\Event\ResponseEvent $event
    *        Response event.
    */
   public function onKernelResponse(ResponseEvent $event) {
