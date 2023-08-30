@@ -209,7 +209,7 @@ class ApivuejsController extends ControllerBase {
    */
   public function countEntities(Request $Request, $entity_type_id) {
     try {
-      $query = $this->entityTypeManager()->getStorage($entity_type_id)->getQuery();
+      $query = $this->entityTypeManager()->getStorage($entity_type_id)->getQuery()->accessCheck(false);
       $values = Json::decode($Request->getContent());
       if (!empty($values['and'])) {
         foreach ($values['and'] as $filter) {
@@ -292,7 +292,7 @@ class ApivuejsController extends ControllerBase {
         if ($entity->getEntityType()->getBaseTable()) {
           $entity->delete();
         } else {
-          $query = $this->entityTypeManager()->getStorage($entity->getEntityType()->getBundleOf())->getQuery();
+          $query = $this->entityTypeManager()->getStorage($entity->getEntityType()->getBundleOf())->getQuery()->accessCheck(false);
           $query->condition('type', $param['id']);
           $nbre = $query->count()->execute();
           if ($nbre) {
