@@ -12,14 +12,14 @@ use Symfony\Component\HttpKernel\KernelEvents;
  * Api vuejs event subscriber.
  */
 class ApivuejsSubscriber implements EventSubscriberInterface {
-  
+
   /**
    * The messenger.
    *
    * @var \Drupal\Core\Messenger\MessengerInterface
    */
   protected $messenger;
-  
+
   /**
    * Constructs event subscriber.
    *
@@ -29,7 +29,7 @@ class ApivuejsSubscriber implements EventSubscriberInterface {
   public function __construct(MessengerInterface $messenger) {
     $this->messenger = $messenger;
   }
-  
+
   /**
    * Kernel request event handler.
    *
@@ -39,17 +39,17 @@ class ApivuejsSubscriber implements EventSubscriberInterface {
   public function onKernelRequest() {
     // $this->messenger->addStatus(__FUNCTION__);
   }
-  
+
   /**
    * Kernel response event handler.
    *
-   * @param \Symfony\Component\HttpKernel\Event\FilterResponseEvent $event
+   * @param \Symfony\Component\HttpKernel\Event\ResponseEvent $event
    *        Response event.
    */
   public function onKernelResponse() {
     // $this->messenger->addStatus(__FUNCTION__);
   }
-  
+
   /**
    *
    * {@inheritdoc}
@@ -64,5 +64,4 @@ class ApivuejsSubscriber implements EventSubscriberInterface {
       ]
     ];
   }
-  
 }
