@@ -4,10 +4,8 @@ namespace Drupal\apivuejs\EventSubscriber;
 
 use Drupal\Core\Messenger\MessengerInterface;
 use Symfony\Component\EventDispatcher\EventSubscriberInterface;
+use Symfony\Component\HttpKernel\Event\FilterResponseEvent;
 use Symfony\Component\HttpKernel\Event\ResponseEvent;
-use Symfony\Component\HttpKernel\Event\GetResponseEvent;
-use Symfony\Component\HttpKernel\Event\RequestEvent;
-
 use Symfony\Component\HttpKernel\KernelEvents;
 
 /**
@@ -35,10 +33,10 @@ class ApivuejsSubscriber implements EventSubscriberInterface {
   /**
    * Kernel request event handler.
    *
-   * @param \Symfony\Component\HttpKernel\Event\RequestEvent $event
+   * @param \Symfony\Component\HttpKernel\Event\ResponseEvent $event
    *        Response event.
    */
-  public function onKernelRequest(RequestEvent $event) {
+  public function onKernelRequest() {
     // $this->messenger->addStatus(__FUNCTION__);
   }
 
@@ -48,7 +46,7 @@ class ApivuejsSubscriber implements EventSubscriberInterface {
    * @param \Symfony\Component\HttpKernel\Event\ResponseEvent $event
    *        Response event.
    */
-  public function onKernelResponse(ResponseEvent $event) {
+  public function onKernelResponse() {
     // $this->messenger->addStatus(__FUNCTION__);
   }
 
