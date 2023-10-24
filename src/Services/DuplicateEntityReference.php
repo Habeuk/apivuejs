@@ -9,12 +9,9 @@ use Drupal\commerce_product\Entity\Product;
 use Drupal\paragraphs\Entity\Paragraph;
 use Drupal\Core\Entity\ContentEntityBase;
 use Drupal\commerce_product\Entity\ProductVariation;
-use Drupal\vuejs_entity\Event\DuplicateEntityEvent;
-use Drupal\apivuejs\Services\GenerateForm;
-use Symfony\Component\DependencyInjection\ContainerInterface;
 use Drupal\blockscontent\Entity\BlocksContents;
-use Drupal\Core\Entity\EntityBase;
 use Drupal\Component\Utility\NestedArray;
+use Drupal\Core\Entity\EntityInterface;
 
 class DuplicateEntityReference extends ControllerBase {
   protected static $field_domain_access = null;
@@ -68,6 +65,20 @@ class DuplicateEntityReference extends ControllerBase {
     'node_type',
     'blocks_contents_type'
   ];
+  
+  /**
+   * Entites valide pour la duplications.
+   *
+   * @var array
+   */
+  protected $duplicable_entities_types = [
+    "paragraph",
+    "blocks_contents",
+    "block_content",
+    "node",
+    "webform",
+    "commerce_product"
+  ];
   protected $lang_code;
   
   /**
@@ -105,6 +116,104 @@ class DuplicateEntityReference extends ControllerBase {
         }
       }
     }
+  }
+  
+  /**
+   * Permet de dupliquer une entité.
+   *
+   * @param ContentEntityBase $entity
+   * @param boolean $is_sub
+   *        true return l'id de lentité et false retourne l'entité
+   * @param array $fieldsList
+   *        // les champs à dupliquer uniquement pour l'entite de base.
+   * @param array $setFields
+   *        // les champs qui doivent etre mise à jour..
+   * @return \Drupal\Core\Entity\ContentEntityBase
+   */
+  public function duplicateEntity(EntityInterface $entity, bool $is_sub = false, array $fieldsList = [], array $setFields = []) {
+    $EntityTypeId = $entity->getEntityTypeId();
+    if ($EntityTypeId == 'commerce_product') {
+      $newEntity = $this->duplicateProductEntity($entity);
+    }
+    else
+      $newEntity = $entity->createDuplicate();
+    $this->DefaultUpdateEntity($newEntity);
+    
+    if ($setFields)
+      $this->setValues($newEntity, $setFields);
+    
+    if ($EntityTypeId == 'webform') {
+      $newEntity->set("id", \strtolower(substr($entity->id(), 0, 10) . date('YMdi') . rand(0, 9999)));
+      $newEntity->save();
+    }
+    else {
+      $arrayValue = $fieldsList ? $fieldsList : $newEntity->toArray();
+      foreach ($arrayValue as $field_name => $value) {
+        $settings = $entity->get($field_name)->getSettings();
+        // Duplicate sub entities.
+        if (!empty($settings['target_type']) && in_array($settings['target_type'], $this->duplicable_entities_types)) {
+          $valueList = [];
+          foreach ($value as $entity_id) {
+            $sub_entity = $this->entityTypeManager()->getStorage($settings['target_type'])->load($entity_id['target_id']);
+            if (!empty($sub_entity)) {
+              $valueList[] = $this->duplicateEntity($sub_entity, true, [], $setFields);
+            }
+          }
+          $newEntity->set($field_name, $valueList);
+        }
+        $newEntity->save();
+      }
+    }
+    return $is_sub ? $newEntity->id() : $newEntity;
+  }
+  
+  /**
+   * Permet de duppliquer un produit et ses variations.
+   *
+   * @param \Drupal\commerce_product\Entity\Product $Product
+   *        le produit à dupliquer
+   */
+  public function duplicateProductEntity(\Drupal\commerce_product\Entity\Product $Product) {
+    $newProduct = $Product->createDuplicate();
+    $variationsIds = $newProduct->getVariationIds();
+    $newProduct->setVariations([]);
+    $newProduct->save();
+    $productId = $newProduct->id();
+    $newVariationsIds = [];
+    foreach ($variationsIds as $id) {
+      $ProductVariation = \Drupal\commerce_product\Entity\ProductVariation::load($id);
+      $this->DefaultUpdateEntity($ProductVariation);
+      $cloneProduct = $ProductVariation->createDuplicate();
+      $cloneProduct->set('product_id', $productId);
+      // Cette variation serra automatiquement ajouter au produit.
+      $cloneProduct->save();
+      $newVariationsIds[] = $cloneProduct;
+    }
+    if ($newVariationsIds) {
+      $newProduct->setVariations($newVariationsIds);
+      $newProduct->save();
+    }
+    return $newProduct;
+  }
+  
+  protected function setValues(ContentEntityBase &$newEntity, array $setFields) {
+    foreach ($setFields as $field_name => $value) {
+      if ($newEntity->hasField($field_name)) {
+        $newEntity->set($field_name, $value);
+      }
+    }
+  }
+  
+  protected function DefaultUpdateEntity(&$newEntity) {
+    $uid = $this->currentUser()->id();
+    if (method_exists($newEntity, 'setCreatedTime'))
+      $newEntity->setCreatedTime(time());
+    if (method_exists($newEntity, 'setChangedTime'))
+      $newEntity->setChangedTime(time());
+    if (method_exists($newEntity, 'setOwnerId'))
+      $newEntity->setOwnerId($uid);
+    if (method_exists($newEntity, 'setPublished'))
+      $newEntity->setPublished();
   }
   
   /**
@@ -402,13 +511,18 @@ class DuplicateEntityReference extends ControllerBase {
         }
         // Dupliquer les produits.
         elseif (!empty($setings['target_type']) && $setings['target_type'] == 'commerce_product') {
+          /**
+           * Doit se faire ailleurs.
+           */
           // Pour le type produit, on doit Ajouter le role à l'utilisateur.
-          if (!empty($this->currentUser()->id()) && !in_array('manage_ecommerce', $this->currentUser()->getRoles())) {
-            $user = \Drupal\user\Entity\User::load($this->currentUser->id());
-            $user->addRole('manage_ecommerce');
-            $user->save();
-            $this->messenger()->addMessage(' Le role vendor a été automatiquement ajouté ');
-          }
+          // if (!empty($this->currentUser()->id()) &&
+          // !in_array('manage_ecommerce', $this->currentUser()->getRoles())) {
+          // $user = \Drupal\user\Entity\User::load($this->currentUser->id());
+          // $user->addRole('manage_ecommerce');
+          // $user->save();
+          // $this->messenger()->addMessage(' Le role vendor a été
+          // automatiquement ajouté ');
+          // }
           foreach ($vals as $value) {
             /**
              *
@@ -503,6 +617,8 @@ class DuplicateEntityReference extends ControllerBase {
   }
   
   /**
+   * NB: cette approche est adapté pour vuejs.( voir le module :
+   * formatage_models )
    * Permet de cloner un produit avec ses variations.
    * (NB: le clone du produit est sauvegarder car les variations ont besoin de
    * l'id ).s
@@ -618,4 +734,5 @@ class DuplicateEntityReference extends ControllerBase {
   function saveDuplicateEntities(ContentEntityBase &$entity, array &$datasJson = []) {
     //
   }
+  
 }
