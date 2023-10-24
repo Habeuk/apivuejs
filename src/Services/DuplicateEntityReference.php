@@ -137,16 +137,18 @@ class DuplicateEntityReference extends ControllerBase {
     }
     else
       $newEntity = $entity->createDuplicate();
-    $this->DefaultUpdateEntity($newEntity);
-    
-    if ($setFields)
-      $this->setValues($newEntity, $setFields);
     
     if ($EntityTypeId == 'webform') {
-      $newEntity->set("id", \strtolower(substr($entity->id(), 0, 10) . date('YMdi') . rand(0, 9999)));
+      if (\Drupal::moduleHandler()->moduleExists('webform_domain_access') && !empty($setFields[self::$field_domain_access])) {
+        $newEntity->setThirdPartySetting('webform_domain_access', self::$field_domain_access, $setFields[self::$field_domain_access]);
+      }
+      $newEntity->set("id", \strtolower(substr($entity->id(), 0, 10) . date('mdi') . rand(0, 9999)));
       $newEntity->save();
     }
-    else {
+    elseif ($newEntity instanceof ContentEntityBase) {
+      $this->DefaultUpdateEntity($newEntity);
+      if ($setFields)
+        $this->setValues($newEntity, $setFields);
       $arrayValue = $fieldsList ? $fieldsList : $newEntity->toArray();
       foreach ($arrayValue as $field_name => $value) {
         $settings = $entity->get($field_name)->getSettings();
