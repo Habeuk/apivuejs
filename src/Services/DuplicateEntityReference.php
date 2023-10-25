@@ -127,16 +127,20 @@ class DuplicateEntityReference extends ControllerBase {
    * @param array $fieldsList
    *        // les champs à dupliquer uniquement pour l'entite de base.
    * @param array $setFields
-   *        // les champs qui doivent etre mise à jour..
+   *        // les champs qui doivent etre mise à jour.
+   *        
    * @return \Drupal\Core\Entity\ContentEntityBase
    */
-  public function duplicateEntity(EntityInterface $entity, bool $is_sub = false, array $fieldsList = [], array $setFields = []) {
+  public function duplicateEntity(EntityInterface $entity, bool $is_sub = false, array $fieldsList = [], array $setFields = [], $duplicate = true) {
     $EntityTypeId = $entity->getEntityTypeId();
-    if ($EntityTypeId == 'commerce_product') {
+    if ($duplicate && $EntityTypeId == 'commerce_product') {
       $newEntity = $this->duplicateProductEntity($entity);
     }
-    else
+    elseif ($duplicate)
       $newEntity = $entity->createDuplicate();
+    else {
+      $newEntity = $entity;
+    }
     
     if ($EntityTypeId == 'webform') {
       if (\Drupal::moduleHandler()->moduleExists('webform_domain_access') && !empty($setFields[self::$field_domain_access])) {
@@ -167,6 +171,50 @@ class DuplicateEntityReference extends ControllerBase {
       }
     }
     return $is_sub ? $newEntity->id() : $newEntity;
+  }
+  
+  /**
+   * Permet de mettre à jour un contenu dupliqué.
+   * Context :
+   * Nous avons duplique un contenu node : 150 à partir du node 12.
+   * Nous avons MAJ le node 12, nous souhaitons repercuté ces changements sur le
+   * node 150.
+   * Mise en place :
+   * Dans un premier temps on supprime les anciens sous contenus, ensuite on
+   * ajoute les ajoutes les nouveaux contenus.
+   *
+   *
+   * @param ContentEntityBase $entity
+   * @param boolean $is_sub
+   *        true return l'id de lentité et false retourne l'entité
+   * @param array $fieldsList
+   *        // les champs à supprimer uniquement pour l'entite de base.
+   *        
+   * @return void
+   */
+  public function deleteSubEntity(EntityInterface &$entity, array $fieldsList = []) {
+    $EntityTypeId = $entity->getEntityTypeId();
+    if ($EntityTypeId == 'webform') {
+      $entity->delete();
+    }
+    elseif ($entity instanceof ContentEntityBase) {
+      $arrayValue = $fieldsList ? $fieldsList : $entity->toArray();
+      foreach ($arrayValue as $field_name => $value) {
+        $settings = $entity->get($field_name)->getSettings();
+        // delete sub entities.
+        if (!empty($settings['target_type']) && in_array($settings['target_type'], $this->duplicable_entities_types)) {
+          foreach ($value as $entity_id) {
+            $sub_entity = $this->entityTypeManager()->getStorage($settings['target_type'])->load($entity_id['target_id']);
+            if (!empty($sub_entity)) {
+              $this->deleteSubEntity($sub_entity);
+              $sub_entity->delete();
+            }
+          }
+          $entity->set($field_name, []);
+        }
+        $entity->save();
+      }
+    }
   }
   
   /**
