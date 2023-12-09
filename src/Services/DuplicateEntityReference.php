@@ -119,7 +119,8 @@ class DuplicateEntityReference extends ControllerBase {
   }
   
   /**
-   * Permet de dupliquer une entité.
+   * Permet de dupliquer une entité si $duplicate=true et uniquement les sous
+   * entitées dans le cas contraire.
    *
    * @param ContentEntityBase $entity
    * @param boolean $is_sub
@@ -181,7 +182,9 @@ class DuplicateEntityReference extends ControllerBase {
    * node 150.
    * Mise en place :
    * Dans un premier temps on supprime les anciens sous contenus, ensuite on
-   * ajoute les ajoutes les nouveaux contenus.
+   * ajoute les ajoutes les nouveaux contenus via la methode duplicateEntity
+   * avec $duplicate=false. Voir une implementation dans
+   * \Drupal\content_duplicator\Services\Manager::updateClone.
    *
    *
    * @param ContentEntityBase $entity
