@@ -77,7 +77,9 @@ class DuplicateEntityReference extends ControllerBase {
     "block_content",
     "node",
     "webform",
-    "commerce_product"
+    "commerce_product",
+    "commerce_promotion",
+    "commerce_promotion_coupon"
   ];
   protected $lang_code;
   
@@ -121,6 +123,7 @@ class DuplicateEntityReference extends ControllerBase {
   /**
    * Permet de dupliquer une entité si $duplicate=true et uniquement les sous
    * entitées dans le cas contraire.
+   * Cette logique est adapté pour un environnement restant sur Drupal.
    *
    * @param ContentEntityBase $entity
    * @param boolean $is_sub
@@ -270,6 +273,7 @@ class DuplicateEntityReference extends ControllerBase {
   }
   
   /**
+   * Cette logique est utilisable principalement pour les vuejs.
    * Permet de generer une matrice des entites avec des actions au choix tels
    * que : la duplication, un formulaire d'edition des entites.
    * ( NB: il ne fait aucune sauvegarde ).
