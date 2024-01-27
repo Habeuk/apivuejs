@@ -79,33 +79,33 @@ class ApivuejsController extends ControllerBase {
         $entity = $EntityStorage->create($values);
         if ($entity->id()) {
           /**
-           * Pour la maj il faut verifier l'access à l'entité.
-           *
-           * @see https://www.drupal.org/docs/drupal-apis/entity-api/working-with-the-entity-api#s-checking-if-a-user-account-has-access-to-an-entity-object
-           */
-          /**
-           *
-           * @var Boolean | \Drupal\Core\Access\AccessResultInterface
-           *      $accessResult
-           */
-          $accessResult = $entity->access('update');
-          if ($accessResult !== true) {
-            if ($accessResult === false) {
-              throw new ExceptionDebug(" Vous n'avez pas les autorisations necessaire :: false ");
-            }
-            elseif ($accessResult instanceof \Drupal\Core\Access\AccessResultInterface) {
-              if ($accessResult->isForbidden()) {
-                throw new ExceptionDebug(" Vous n'avez pas les autorisations necessaire ");
-              }
-            }
-          }
-          /**
            *
            * @var ContentEntityInterface $OldEntity
            */
           $OldEntity = $EntityStorage->load($entity->id());
           
           if ($OldEntity) {
+            /**
+             * Pour la maj il faut verifier l'access à l'entité.
+             *
+             * @see https://www.drupal.org/docs/drupal-apis/entity-api/working-with-the-entity-api#s-checking-if-a-user-account-has-access-to-an-entity-object
+             */
+            /**
+             *
+             * @var Boolean | \Drupal\Core\Access\AccessResultInterface
+             *      $accessResult
+             */
+            $accessResult = $entity->access('update');
+            if ($accessResult !== true) {
+              if ($accessResult === false) {
+                throw new ExceptionDebug(" Vous n'avez pas les autorisations necessaire :: false ");
+              }
+              elseif ($accessResult instanceof \Drupal\Core\Access\AccessResultInterface) {
+                if ($accessResult->isForbidden()) {
+                  throw new ExceptionDebug(" Vous n'avez pas les autorisations necessaire ");
+                }
+              }
+            }
             // on doit controller l'access avant la MAJ pour les champs
             // de type contentEntity.
             if ($EntityStorage->getEntityType()->getBaseTable()) {
