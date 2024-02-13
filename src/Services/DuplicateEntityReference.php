@@ -166,7 +166,7 @@ class DuplicateEntityReference extends ControllerBase {
           foreach ($value as $entity_id) {
             $sub_entity = $this->entityTypeManager()->getStorage($settings['target_type'])->load($entity_id['target_id']);
             if (!empty($sub_entity)) {
-              $valueList[] = $this->duplicateEntity($sub_entity, true, [], $setFields);
+              $valueList[] = $this->duplicateEntity($sub_entity, true, [], $setFields, true);
             }
           }
           $newEntity->set($field_name, $valueList);
