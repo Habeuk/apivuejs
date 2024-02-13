@@ -150,6 +150,7 @@ class DuplicateEntityReference extends ControllerBase {
       if (\Drupal::moduleHandler()->moduleExists('webform_domain_access') && !empty($setFields[self::$field_domain_access])) {
         $newEntity->setThirdPartySetting('webform_domain_access', self::$field_domain_access, $setFields[self::$field_domain_access]);
       }
+      
       $newEntity->set("id", \strtolower(substr($entity->id(), 0, 10) . date('mdi') . rand(0, 9999)));
       $newEntity->save();
     }
@@ -157,7 +158,9 @@ class DuplicateEntityReference extends ControllerBase {
       $this->DefaultUpdateEntity($newEntity);
       if ($setFields)
         $this->setValues($newEntity, $setFields);
+      
       $arrayValue = $fieldsList ? $fieldsList : $newEntity->toArray();
+      
       foreach ($arrayValue as $field_name => $value) {
         $settings = $entity->get($field_name)->getSettings();
         // Duplicate sub entities.
@@ -166,7 +169,7 @@ class DuplicateEntityReference extends ControllerBase {
           foreach ($value as $entity_id) {
             $sub_entity = $this->entityTypeManager()->getStorage($settings['target_type'])->load($entity_id['target_id']);
             if (!empty($sub_entity)) {
-              $valueList[] = $this->duplicateEntity($sub_entity, true, [], $setFields, true);
+              $valueList[]["target_id"] = $this->duplicateEntity($sub_entity, true, [], $setFields, true);
             }
           }
           $newEntity->set($field_name, $valueList);
@@ -255,7 +258,7 @@ class DuplicateEntityReference extends ControllerBase {
   protected function setValues(ContentEntityBase &$newEntity, array $setFields) {
     foreach ($setFields as $field_name => $value) {
       if ($newEntity->hasField($field_name)) {
-        $newEntity->set($field_name, $value);
+        $newEntity->setValue($field_name, $value);
       }
     }
   }
