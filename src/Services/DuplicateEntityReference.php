@@ -145,7 +145,7 @@ class DuplicateEntityReference extends ControllerBase {
     else {
       $newEntity = $entity;
     }
-    
+    // dump($EntityTypeId, $is_sub, $duplicate, $entity);
     if ($EntityTypeId == 'webform') {
       if (\Drupal::moduleHandler()->moduleExists('webform_domain_access') && !empty($setFields[self::$field_domain_access])) {
         $newEntity->setThirdPartySetting('webform_domain_access', self::$field_domain_access, $setFields[self::$field_domain_access]);
@@ -158,9 +158,7 @@ class DuplicateEntityReference extends ControllerBase {
       $this->DefaultUpdateEntity($newEntity);
       if ($setFields)
         $this->setValues($newEntity, $setFields);
-      
       $arrayValue = $fieldsList ? $fieldsList : $newEntity->toArray();
-      
       foreach ($arrayValue as $field_name => $value) {
         $settings = $entity->get($field_name)->getSettings();
         // Duplicate sub entities.
@@ -169,13 +167,14 @@ class DuplicateEntityReference extends ControllerBase {
           foreach ($value as $entity_id) {
             $sub_entity = $this->entityTypeManager()->getStorage($settings['target_type'])->load($entity_id['target_id']);
             if (!empty($sub_entity)) {
+              // On doit toujours dupliquer les elements enfants.
               $valueList[]["target_id"] = $this->duplicateEntity($sub_entity, true, [], $setFields, true);
             }
           }
           $newEntity->set($field_name, $valueList);
         }
-        $newEntity->save();
       }
+      $newEntity->save();
     }
     return $is_sub ? $newEntity->id() : $newEntity;
   }
@@ -193,6 +192,7 @@ class DuplicateEntityReference extends ControllerBase {
    * \Drupal\content_duplicator\Services\Manager::updateClone.
    *
    *
+   *
    * @param ContentEntityBase $entity
    * @param boolean $is_sub
    *        true return l'id de lentité et false retourne l'entité
@@ -201,7 +201,7 @@ class DuplicateEntityReference extends ControllerBase {
    *        
    * @return void
    */
-  public function deleteSubEntity(EntityInterface &$entity, array $fieldsList = []) {
+  public function deleteSubEntity(EntityInterface &$entity, array $fieldsList = [], $level = 1) {
     $EntityTypeId = $entity->getEntityTypeId();
     if ($EntityTypeId == 'webform') {
       $entity->delete();
@@ -215,13 +215,20 @@ class DuplicateEntityReference extends ControllerBase {
           foreach ($value as $entity_id) {
             $sub_entity = $this->entityTypeManager()->getStorage($settings['target_type'])->load($entity_id['target_id']);
             if (!empty($sub_entity)) {
-              $this->deleteSubEntity($sub_entity);
-              $sub_entity->delete();
+              $level++;
+              if ($level > 1)
+                $this->deleteSubEntity($sub_entity, $fieldsList, $level);
             }
           }
           $entity->set($field_name, []);
         }
+      }
+      // On sauvegarde uniquement pour le niveau 1.
+      if ($level === 1) {
         $entity->save();
+      }
+      elseif ($level > 1) {
+        $entity->delete();
       }
     }
   }
@@ -793,6 +800,10 @@ class DuplicateEntityReference extends ControllerBase {
    */
   function saveDuplicateEntities(ContentEntityBase &$entity, array &$datasJson = []) {
     //
+  }
+  
+  public function getDuplicableEntitiesTypes() {
+    return $this->duplicable_entities_types;
   }
   
 }
