@@ -258,7 +258,7 @@ class DuplicateEntityReference extends ControllerBase {
   protected function setValues(ContentEntityBase &$newEntity, array $setFields) {
     foreach ($setFields as $field_name => $value) {
       if ($newEntity->hasField($field_name)) {
-        $newEntity->setValue($field_name, $value);
+        $newEntity->set($field_name, $value);
       }
     }
   }
