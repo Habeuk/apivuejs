@@ -145,7 +145,7 @@ class DuplicateEntityReference extends ControllerBase {
     else {
       $newEntity = $entity;
     }
-    // dump($EntityTypeId, $is_sub, $duplicate, $entity);
+    
     if ($EntityTypeId == 'webform') {
       if (\Drupal::moduleHandler()->moduleExists('webform_domain_access') && !empty($setFields[self::$field_domain_access])) {
         $newEntity->setThirdPartySetting('webform_domain_access', self::$field_domain_access, $setFields[self::$field_domain_access]);
@@ -215,9 +215,8 @@ class DuplicateEntityReference extends ControllerBase {
           foreach ($value as $entity_id) {
             $sub_entity = $this->entityTypeManager()->getStorage($settings['target_type'])->load($entity_id['target_id']);
             if (!empty($sub_entity)) {
-              $level++;
-              if ($level > 1)
-                $this->deleteSubEntity($sub_entity, $fieldsList, $level);
+              $sub_level = $level + 1;
+              $this->deleteSubEntity($sub_entity, $fieldsList, $sub_level);
             }
           }
           $entity->set($field_name, []);
