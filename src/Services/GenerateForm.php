@@ -68,6 +68,7 @@ class GenerateForm extends ControllerBase {
     }
     
     $fields = $entity->toArray();
+    $this->toArrayLayoutBuilderField($fields);
     
     /**
      *
@@ -194,6 +195,28 @@ class GenerateForm extends ControllerBase {
       'target_type' => $entity_type_id, // l'id de l'entité.
       'label' => $entity->label()
     ];
+  }
+  
+  /**
+   * Cette fonction a pour objectif de recuperer le json du layout_builder.
+   * La fonction toArray de l'entité ne transmet pas pour le moment les bonnes
+   * valeurs (en fait c'est vide),
+   *
+   * @see https://www.drupal.org/project/drupal/issues/2942975
+   */
+  function toArrayLayoutBuilderField(array &$entity) {
+    if (!empty($entity['layout_builder__layout'])) {
+      foreach ($entity['layout_builder__layout'] as $i => $sections) {
+        foreach ($sections as $s => $section) {
+          /**
+           *
+           * @var \Drupal\layout_builder\Section $section
+           */
+          $entity['layout_builder__layout'][$i][$s] = $section->toArray();
+        }
+      }
+    }
+    return $entity;
   }
   
 }
