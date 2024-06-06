@@ -244,11 +244,17 @@ class ApivuejsController extends ControllerBase {
     if (!empty($entity['layout_builder__layout'])) {
       foreach ($entity['layout_builder__layout'] as $i => $sections) {
         foreach ($sections as $s => $section) {
-          /**
-           *
-           * @var \Drupal\layout_builder\Section $section
-           */
-          $entity['layout_builder__layout'][$i][$s] = Section::fromArray($section);
+          // si le plugin n'est pas definit on le retire.
+          if (empty($section)) {
+            unset($entity['layout_builder__layout'][$i]);
+          }
+          else {
+            /**
+             *
+             * @var \Drupal\layout_builder\Section $section
+             */
+            $entity['layout_builder__layout'][$i][$s] = Section::fromArray($section);
+          }
         }
       }
     }
