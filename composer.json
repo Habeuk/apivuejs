@@ -1,7 +1,7 @@
 {
     "name": "habeuk/apivuejs",
     "description": "permet de gerer les formulaires drupal par vuejs",
-    "type": "drupal-custom-module",
+    "type": "drupal-module",
     "license": "MIT",
     "authors": [
         {
