@@ -775,10 +775,10 @@ class DuplicateEntityReference extends ControllerBase {
       foreach ($entity['layout_builder__layout'] as $i => $sections) {
         foreach ($sections as $s => $section) {
           /**
-           *
+           * @todo vérifier pourquoi est ce parfois on reçois un array au lieu de Section
            * @var \Drupal\layout_builder\Section $section
            */
-          $entity['layout_builder__layout'][$i][$s] = $section->toArray();
+          $entity['layout_builder__layout'][$i][$s] = (gettype($section) === "array") ? $section : $section->toArray();
         }
       }
     }
