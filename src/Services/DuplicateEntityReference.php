@@ -786,11 +786,14 @@ class DuplicateEntityReference extends ControllerBase {
     if (!empty($entity['layout_builder__layout'])) {
       foreach ($entity['layout_builder__layout'] as $i => $sections) {
         foreach ($sections as $s => $section) {
-          /**
-           *
-           * @var \Drupal\layout_builder\Section $section
-           */
-          $entity['layout_builder__layout'][$i][$s] = $section->toArray();
+            if(is_object($section)){
+                /**
+                 *
+                 * @var \Drupal\layout_builder\Section $section
+                 */
+                $entity['layout_builder__layout'][$i][$s] = $section->toArray();
+            }
+          
         }
       }
     }
