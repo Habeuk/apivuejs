@@ -686,8 +686,44 @@ class DuplicateEntityReference extends ControllerBase {
             }
           }
         }
+        /**
+         * Duplication des autres entites necesaires.
+         */
+        elseif (!empty($setings['target_type']) && ($setings['target_type'] == 'commerce_product_attribute_value' || $setings['target_type'] == 'commerce_product_attribute')) {
+          foreach ($vals as $value) {
+            $ortherEntity = $this->entityTypeManager()->getStorage($setings['target_type']) ? $this->entityTypeManager()->getStorage($setings['target_type'])->load($value['target_id']) : null;
+            if ($ortherEntity && $ortherEntity instanceof ContentEntityBase) {
+              if ($duplicate) {
+                $ortherEntity = $this->getEntityTranslate($ortherEntity);
+                $cloneOrtherEntity = $ortherEntity->createDuplicate();
+                // On ajoute le champs field_domain_access; ci-possible.
+                if (self::$field_domain_access && $cloneOrtherEntity->hasField(self::$field_domain_access) && $entity->hasField(self::$field_domain_access)) {
+                  $cloneOrtherEntity->set(self::$field_domain_access, $entity->get(self::$field_domain_access)->getValue());
+                }
+                // on met à jour l'id de lutilisateur.
+                $cloneOrtherEntity->setOwnerId($uid);
+              }
+              else
+                $cloneOrtherEntity = $ortherEntity;
+              $subDatas = $setings;
+              $subDatas['target_id'] = $value['target_id'];
+              $ar = $cloneOrtherEntity->toArray();
+              $subDatas['entity'] = $this->toArrayLayoutBuilderField($ar);
+              $subDatas['entities'] = [];
+              // On ajoute le formulaire si necessaire :
+              if ($add_form) {
+                $subDatas += $this->GenerateForm->getForm($setings['target_type'], $cloneOrtherEntity->bundle(), 'default', $cloneOrtherEntity);
+              }
+              // On verifie pour les sous entites.
+              $this->duplicateExistantReference($ortherEntity, $subDatas['entities'], $duplicate, $add_form);
+              $datasJson[$k][] = $subDatas;
+            }
+          }
+        }
         else {
-          \Drupal::logger('vuejs_entity')->alert(" Entité non traitée, field :" . $k . ', type : ' . $setings['target_type']);
+          $message = " Entité non traitée, field :" . $k . ', type : ' . $setings['target_type'];
+          $this->messenger()->addError($message);
+          \Drupal::logger('vuejs_entity')->alert($message);
         }
       }
       /**
