@@ -301,6 +301,8 @@ class DuplicateEntityReference extends ControllerBase {
   
   /**
    * Cette logique est utilisable principalement pour les vuejs.
+   * Elle peu etre utiliser pour toutes les logiques qui souhaite avoir du JSON
+   * d'une entité.
    * Permet de generer une matrice des entites avec des actions au choix tels
    * que : la duplication, un formulaire d'edition des entites.
    * ( NB: il ne fait aucune sauvegarde ).
@@ -786,14 +788,13 @@ class DuplicateEntityReference extends ControllerBase {
     if (!empty($entity['layout_builder__layout'])) {
       foreach ($entity['layout_builder__layout'] as $i => $sections) {
         foreach ($sections as $s => $section) {
-            if(is_object($section)){
-                /**
-                 *
-                 * @var \Drupal\layout_builder\Section $section
-                 */
-                $entity['layout_builder__layout'][$i][$s] = $section->toArray();
-            }
-          
+          if (is_object($section)) {
+            /**
+             *
+             * @var \Drupal\layout_builder\Section $section
+             */
+            $entity['layout_builder__layout'][$i][$s] = $section->toArray();
+          }
         }
       }
     }
