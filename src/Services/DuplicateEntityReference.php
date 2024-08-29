@@ -10,7 +10,9 @@ use Drupal\paragraphs\Entity\Paragraph;
 use Drupal\Core\Entity\ContentEntityBase;
 use Drupal\commerce_product\Entity\ProductVariation;
 use Drupal\blockscontent\Entity\BlocksContents;
+use Drupal\Component\Serialization\Yaml;
 use Drupal\Component\Utility\NestedArray;
+use Drupal\Core\Config\StorageInterface;
 use Drupal\Core\Entity\EntityInterface;
 
 class DuplicateEntityReference extends ControllerBase {
@@ -22,8 +24,17 @@ class DuplicateEntityReference extends ControllerBase {
    */
   protected $GenerateForm;
 
-  function __construct(GenerateForm $GenerateForm) {
+  /**
+   * The config storage.
+   *
+   * @var \Drupal\Core\Config\StorageInterface
+   */
+  protected $configStorage;
+
+
+  function __construct(GenerateForm $GenerateForm, StorageInterface $config_storage) {
     $this->GenerateForm = $GenerateForm;
+    $this->configStorage = $config_storage;
     $this->getFieldsDomain();
   }
 
@@ -120,6 +131,67 @@ class DuplicateEntityReference extends ControllerBase {
     }
   }
 
+
+  //**************************************IMPORTANT
+  //Les deux méthodes qui suivent sont des copies de méthodes qui existent déjà
+  /**
+   * Get the translated configuration set.
+   *
+   * This configuration set is complete with all keys that the original language
+   * has to offer. Every key that has a translation will have the translated
+   * value in its place. Merging is done using array_replace_recursive().
+   *
+   * @param string $configName
+   *   The name of the configuration file.
+   * @param string $langCode
+   *   The language id. Leave empty for current Drupal language.
+   *
+   * @return array
+   *   Returns the combined translated configuration as an object.
+   */
+  public function getTranslatedConfig($configName, $langCode = NULL) {
+    if (empty($langCode)) {
+      $langCode = $this->languageManager()->getDefaultLanguage()->getId();
+    }
+    $originalConfig = $this->configStorage->read($configName);
+    if (!$originalConfig) {
+      return false;
+    }
+    $translatedConfig = $this->languageManager()->getLanguageConfigOverride($langCode, $configName)->get();
+    $configs = array_replace_recursive($originalConfig, $translatedConfig);
+    if (strpos($configName, 'webform') === 0 && isset($translatedConfig["elements"]) && isset($originalConfig["elements"])) {
+      $elements = Yaml::decode($originalConfig["elements"]);
+      $translatedElements = Yaml::decode($translatedConfig["elements"]);
+      foreach ($translatedElements as $key => $element) {
+        $this->deepFoundAndMerge($key, $element, $elements);
+      }
+      $configs["elements"] = Yaml::encode($elements);
+      $configs["langcode"] = $langCode;
+    }
+    return $configs;
+  }
+
+  /**
+   * replace recursively the value of the key once in the array
+   * it will replace the first element it will find deeply
+   */
+  public function deepFoundAndMerge(string|int $key, mixed &$value, array &$array) {
+    if (isset($array[$key])) {
+      $array[$key] = array_replace_recursive($array[$key], $value);
+      return true;
+    }
+    $found = false;
+    foreach ($array as &$subArray) {
+      if (gettype($subArray) == "array") {
+        if ($this->deepFoundAndMerge($key, $value, $subArray)) {
+          $found = true;
+          break;
+        }
+      }
+    }
+    return $found;
+  }
+
   /**
    * Permet de dupliquer une entité si $duplicate=true et uniquement les sous
    * entitées dans le cas contraire.
@@ -139,9 +211,17 @@ class DuplicateEntityReference extends ControllerBase {
     $EntityTypeId = $entity->getEntityTypeId();
     if ($duplicate && $EntityTypeId == 'commerce_product') {
       $newEntity = $this->duplicateProductEntity($entity);
-    } elseif ($duplicate)
+    } elseif ($duplicate && $EntityTypeId == "webform") {
+      // dd($entity);
+      $formManager = $this->entityTypeManager()->getStorage("webform");
+      $configName = $this->entityTypeManager()->getDefinition("webform")->getConfigPrefix() . '.' . $entity->id();
+      $configs = $this->getTranslatedConfig($configName);
+      $configs["id"] = \strtolower(substr($entity->id(), 0, 10) . date('mdi') . rand(0, 9999));
+      unset($configs["uuid"]);
+      $newEntity = $formManager->create($configs);
+    } elseif ($duplicate) {
       $newEntity = $entity->createDuplicate();
-    else {
+    } else {
       $newEntity = $entity;
     }
 
@@ -149,8 +229,7 @@ class DuplicateEntityReference extends ControllerBase {
       if (\Drupal::moduleHandler()->moduleExists('webform_domain_access') && !empty($setFields[self::$field_domain_access])) {
         $newEntity->setThirdPartySetting('webform_domain_access', self::$field_domain_access, $setFields[self::$field_domain_access]);
       }
-
-      $newEntity->set("id", \strtolower(substr($entity->id(), 0, 10) . date('mdi') . rand(0, 9999)));
+      // $newEntity->set("id", \strtolower(substr($entity->id(), 0, 10) . date('mdi') . rand(0, 9999)));
       $newEntity->save();
     } elseif ($newEntity instanceof ContentEntityBase) {
       $this->DefaultUpdateEntity($newEntity);

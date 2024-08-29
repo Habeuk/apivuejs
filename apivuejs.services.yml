@@ -11,4 +11,4 @@ services:
     
   apivuejs.duplicate_reference:
     class: Drupal\apivuejs\Services\DuplicateEntityReference
-    arguments: ['@apivuejs.getform']
+    arguments: ['@apivuejs.getform', '@config.storage']
