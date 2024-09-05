@@ -405,419 +405,406 @@ class DuplicateEntityReference extends ControllerBase {
       $entity->set(self::$field_domain_all_affiliates, false);
     }
     $values = $entity->toArray();
-    // if (!empty($values['layout_builder__layout'])) {
-    // \Stephane888\Debug\debugLog::$max_depth = 10;
-    // \Stephane888\Debug\debugLog::kintDebugDrupal($values['layout_builder__layout'],
-    // 'layout_builder__layout', true);
-    // }
-    // \Stephane888\Debug\debugLog::kintDebugDrupal($values,
-    // 'duplicateExistantReference', true);
-    // Get the event_dispatcher service and dispatch the event.
-    // $event_dispatcher = \Drupal::service('event_dispatcher');
     foreach ($values as $k => $vals) {
       if (!empty($vals[0]['target_id'])) {
         $setings = $entity->get($k)->getSettings();
-        
         if (empty($setings['target_type']) || in_array($setings['target_type'], $this->ignorEntity))
           continue;
-        // Duplication des paragraph
-        /**
-         * La duplication de paragraphe ajoute une duplication de l'entité à
-         * dupliquer.
-         * => la struture du champs contient en plus une entré "entity"
-         * Donc, on a [{target_id:null, entity:
-         * \Drupal\paragraphs\Entity\Paragraph}],
-         * On a chosit de regler ce probleme via le js, qui doit vider le champs
-         * et ajouter les nouveaux ids.
-         */
-        elseif (!empty($setings['target_type']) && $setings['target_type'] == 'paragraph') {
-          foreach ($vals as $value) {
-            $Paragraph = Paragraph::load($value['target_id']);
-            if ($Paragraph) {
-              $Paragraph = $this->getEntityTranslate($Paragraph);
-              if ($duplicate) {
-                $CloneParagraph = $Paragraph->createDuplicate();
-                if (self::$field_domain_access && $CloneParagraph->hasField(self::$field_domain_access) && $entity->hasField(self::$field_domain_access)) {
-                  $CloneParagraph->set(self::$field_domain_access, $entity->get(self::$field_domain_access)->getValue());
-                }
-              }
-              else
-                $CloneParagraph = $Paragraph;
-              
-              $subDatas = $setings;
-              $subDatas['target_id'] = $value['target_id'];
-              $ar = $CloneParagraph->toArray();
-              $subDatas['entity'] = $this->toArrayLayoutBuilderField($ar);
-              $subDatas['entities'] = [];
-              // On ajoute le formulaire si necessaire :
-              if ($add_form) {
-                $subDatas += $this->GenerateForm->getForm($setings['target_type'], $CloneParagraph->bundle(), 'default', $CloneParagraph);
-              }
-              // On verifie pour les sous entites.
-              // ( on duplique à partir de l'original ).
-              $this->duplicateExistantReference($Paragraph, $subDatas['entities'], $duplicate, $add_form);
-              $datasJson[$k][] = $subDatas;
-            }
-          }
-        }
-        // Duplication des sous nodes.
-        elseif (!empty($setings['target_type']) && $setings['target_type'] == 'node') {
-          foreach ($vals as $value) {
-            $node = Node::load($value['target_id']);
-            if ($node) {
-              $node = $this->getEntityTranslate($node);
-              if ($duplicate) {
-                $cloneNode = $node->createDuplicate();
-                // On ajoute le champs field_domain_access; ci-possible.
-                if (self::$field_domain_access && $cloneNode->hasField(self::$field_domain_access) && $entity->hasField(self::$field_domain_access)) {
-                  $cloneNode->set(self::$field_domain_access, $entity->get(self::$field_domain_access)->getValue());
-                }
-                // on met à jour l'id de lutilisateur.
-                $cloneNode->setOwnerId($uid);
-              }
-              else
-                $cloneNode = $node;
-              
-              $subDatas = $setings;
-              $subDatas['target_id'] = $value['target_id'];
-              $ar = $cloneNode->toArray();
-              $subDatas['entity'] = $this->toArrayLayoutBuilderField($ar);
-              $subDatas['entities'] = [];
-              // On ajoute le formulaire si necessaire :
-              if ($add_form) {
-                $subDatas += $this->GenerateForm->getForm($setings['target_type'], $cloneNode->bundle(), 'default', $cloneNode);
-              }
-              // On verifie pour les sous entites.
-              $this->duplicateExistantReference($node, $subDatas['entities'], $duplicate, $add_form);
-              $datasJson[$k][] = $subDatas;
-            }
-          }
-        }
-        // Duplication des sous nodes.
-        elseif (!empty($setings['target_type']) && $setings['target_type'] == 'blocks_contents') {
-          foreach ($vals as $value) {
-            $BlocksContents = BlocksContents::load($value['target_id']);
-            if ($BlocksContents) {
-              if ($duplicate) {
-                $BlocksContents = $this->getEntityTranslate($BlocksContents);
-                $cloneBlocksContents = $BlocksContents->createDuplicate();
-                // On ajoute le champs field_domain_access; ci-possible.
-                if (self::$field_domain_access && $cloneBlocksContents->hasField(self::$field_domain_access) && $entity->hasField(self::$field_domain_access)) {
-                  $cloneBlocksContents->set(self::$field_domain_access, $entity->get(self::$field_domain_access)->getValue());
-                }
-                // on met à jour l'id de lutilisateur.
-                $cloneBlocksContents->setOwnerId($uid);
-              }
-              else
-                $cloneBlocksContents = $BlocksContents;
-              $subDatas = $setings;
-              $subDatas['target_id'] = $value['target_id'];
-              $ar = $cloneBlocksContents->toArray();
-              $subDatas['entity'] = $this->toArrayLayoutBuilderField($ar);
-              $subDatas['entities'] = [];
-              // On ajoute le formulaire si necessaire :
-              if ($add_form) {
-                $subDatas += $this->GenerateForm->getForm($setings['target_type'], $cloneBlocksContents->bundle(), 'default', $cloneBlocksContents);
-              }
-              // On verifie pour les sous entites.
-              $this->duplicateExistantReference($BlocksContents, $subDatas['entities'], $duplicate, $add_form);
-              $datasJson[$k][] = $subDatas;
-            }
-          }
-        }
-        elseif (!empty($setings['target_type']) && $setings['target_type'] == 'commerce_store') {
-          foreach ($vals as $value) {
-            $Store = \Drupal\commerce_store\Entity\Store::load($value['target_id']);
-            if ($Store) {
-              if ($duplicate) {
-                $Store = $this->getEntityTranslate($Store);
-                $cloneStore = $Store->createDuplicate();
-                // On ajoute le champs field_domain_access; ci-possible.
-                if (self::$field_domain_access && $cloneStore->hasField(self::$field_domain_access) && $entity->hasField(self::$field_domain_access)) {
-                  $cloneStore->set(self::$field_domain_access, $entity->get(self::$field_domain_access)->getValue());
-                }
-                // on met à jour l'id de lutilisateur.
-                $cloneStore->setOwnerId($uid);
-              }
-              else
-                $cloneStore = $Store;
-              $subDatas = $setings;
-              $subDatas['target_id'] = $value['target_id'];
-              $ar = $cloneStore->toArray();
-              $subDatas['entity'] = $this->toArrayLayoutBuilderField($ar);
-              $subDatas['entities'] = [];
-              // On ajoute le formulaire si necessaire :
-              if ($add_form) {
-                $subDatas += $this->GenerateForm->getForm($setings['target_type'], $cloneStore->bundle(), 'default', $cloneStore);
-              }
-              // On verifie pour les sous entites.
-              $this->duplicateExistantReference($Store, $subDatas['entities'], $duplicate, $add_form);
-              $datasJson[$k][] = $subDatas;
-            }
-          }
-        }
-        
-        /**
-         * Ce cas de figure est particulier, car on souhaite recuperer les items
-         * en relation avec l'id du menu.
-         * Ceci est utile pour le module export_import.
-         */
-        elseif (!empty($setings['target_type']) && $setings['target_type'] == 'menu') {
-          foreach ($vals as $value) {
-            $menuItems = $this->entityTypeManager()->getStorage('menu_link_content')->loadByProperties([
-              'menu_name' => $value['target_id']
-            ]);
-            $subDatas = $setings;
-            $subDatas['target_id'] = $value['target_id'];
-            $menu = \Drupal\system\Entity\Menu::load($value['target_id']);
-            $subDatas['entity'] = $menu->toArray();
-            $subDatas['entities'] = [];
-            // On recupere chaque element item du menu.
-            foreach ($menuItems as $menuItem) {
-              $id_item_menu = $menuItem->id();
-              $subDatas['entities']['item--' . $id_item_menu][] = [
-                'target_id' => $menuItem->id(),
-                'entity' => $menuItem->toArray(),
-                'target_type' => 'menu_link_content'
-              ];
-            }
-            $datasJson[$k][] = $subDatas;
-          }
-        }
-        // Duplication des formulaires.
-        elseif (!empty($setings['target_type']) && $setings['target_type'] == 'webform') {
-          foreach ($vals as $value) {
-            $Webform = \Drupal\webform\Entity\Webform::load($value['target_id']);
-            if ($Webform && $duplicate) {
-              /**
-               * Les webforms ont un comportement assez differents des autres
-               * entitées.
-               * il faut globalement construire le tableau avant de renvoyer.
-               * RQ1 : Certaines données (titre, description ...) sont
-               * automatquement traduit en function de la langue.
-               */
-              if ($Webform->getLangcode() != $this->getLangCode()) {
-                /**
-                 * On recupere les elements non traduit et on injecte dans la
-                 * conf.
-                 *
-                 * @var \Drupal\webform\WebformTranslationManager $wftm
-                 */
-                $wftm = \Drupal::service('webform.translation_manager');
-                $elementsTranslate = $wftm->getTranslationElements($Webform, $this->getLangCode());
-                $elementsMerge = NestedArray::mergeDeepArray([
-                  $Webform->getElementsDecoded(),
-                  $elementsTranslate
-                ]);
-                $Webform->setElements($elementsMerge);
-              }
-              $CloneWebform = $Webform->createDuplicate();
-              // Pour les webforms, on doit ajouter le ThirdParty.
-              $domaine = 'Generate';
-              if (self::$field_domain_access) {
-                $domaine = $entity->get(self::$field_domain_access)->target_id;
-                $CloneWebform->setThirdPartySetting('webform_domain_access', self::$field_domain_access, $domaine);
-              }
-              $CloneWebform->set('title', $domaine . ' : ' . $CloneWebform->get('title'));
-              $CloneWebform->set('id', substr($Webform->id(), 0, 10) . date('YMdi') . rand(0, 9999));
-              //
-              $subDatas = $setings;
-              $subDatas['target_id'] = $value['target_id'];
-              $subDatas['entity'] = $CloneWebform->toArray();
-              //
-              if ($subDatas['entity']['langcode'] != $this->getLangCode()) {
-                $subDatas['entity']['langcode'] = $this->getLangCode();
-              }
-              $subDatas['entities'] = [];
-              // $CloneWebform->save();
-              $datasJson[$k][] = $subDatas;
-            }
-          }
-        }
-        // Duplication des sous blocs.
-        elseif (!empty($setings['target_type']) && $setings['target_type'] == 'block_content') {
-          $newBlockIds = [];
-          foreach ($vals as $value) {
-            $BlockContent = BlockContent::load($value['target_id']);
-            if ($BlockContent) {
-              $BlockContent = $this->getEntityTranslate($BlockContent);
-              if ($duplicate) {
-                $CloneBlockContent = $BlockContent->createDuplicate();
-                // On ajoute le champs field_domain_access; ci-possible.
-                if (self::$field_domain_access && $CloneBlockContent->hasField(self::$field_domain_access) && $entity->hasField(self::$field_domain_access)) {
-                  $dmn = $entity->get(self::$field_domain_access)->first()->getValue();
-                  if ($dmn)
-                    $CloneBlockContent->get(self::$field_domain_access)->setValue($dmn);
-                }
-                // On ajoute l'utilisateur courant:
-                if ($CloneBlockContent->hasField('user_id') && $uid) {
-                  $CloneBlockContent->set('user_id', $uid);
-                }
-                // On met jour la date de MAJ
-                if ($CloneBlockContent->hasField('changed')) {
-                  $CloneBlockContent->set('changed', time());
-                }
-                //
-                // On met à jour le champs info (car sa valeur doit etre
-                // unique).
-                if ($CloneBlockContent->hasField("info")) {
-                  $val = '';
-                  if ($CloneBlockContent->get('info')->first())
-                    $val = $CloneBlockContent->get('info')->first()->getValue();
-                  $dmn = '';
-                  if (self::$field_domain_access && $entity->hasField(self::$field_domain_access)) {
-                    $dmn = $entity->get(self::$field_domain_access)->first()->getValue();
-                    $dmn = empty($dmn['target_id']) ? 'domaine.test' : $dmn['target_id'];
-                    $dmn = $dmn . ' : ';
+        elseif (!empty($setings['target_type']))
+          switch ($setings['target_type']) {
+            case 'paragraph':
+              foreach ($vals as $value) {
+                $Paragraph = Paragraph::load($value['target_id']);
+                if ($Paragraph) {
+                  $Paragraph = $this->getEntityTranslate($Paragraph);
+                  if ($duplicate) {
+                    $CloneParagraph = $Paragraph->createDuplicate();
+                    if (self::$field_domain_access && $CloneParagraph->hasField(self::$field_domain_access) && $entity->hasField(self::$field_domain_access)) {
+                      $CloneParagraph->set(self::$field_domain_access, $entity->get(self::$field_domain_access)->getValue());
+                    }
                   }
-                  $val = $dmn . $CloneBlockContent->get('type')->target_id;
-                  $CloneBlockContent->get('info')->setValue([
-                    'value' => $val . ' : ' . count($newBlockIds)
-                  ]);
+                  else
+                    $CloneParagraph = $Paragraph;
+                  
+                  $subDatas = $setings;
+                  $subDatas['target_id'] = $value['target_id'];
+                  $ar = $CloneParagraph->toArray();
+                  $subDatas['entity'] = $this->toArrayLayoutBuilderField($ar);
+                  $subDatas['entities'] = [];
+                  // On ajoute le formulaire si necessaire :
+                  if ($add_form) {
+                    $subDatas += $this->GenerateForm->getForm($setings['target_type'], $CloneParagraph->bundle(), 'default', $CloneParagraph);
+                  }
+                  // On verifie pour les sous entites.
+                  // ( on duplique à partir de l'original ).
+                  $this->duplicateExistantReference($Paragraph, $subDatas['entities'], $duplicate, $add_form);
+                  $datasJson[$k][] = $subDatas;
                 }
               }
-              else
-                $CloneBlockContent = $BlockContent;
-              //
-              $subDatas = $setings;
-              $subDatas['target_id'] = $value['target_id'];
-              $ar = $CloneBlockContent->toArray();
-              $subDatas['entity'] = $this->toArrayLayoutBuilderField($ar);
-              $subDatas['entities'] = [];
-              // On ajoute le formulaire si necessaire :
-              if ($add_form) {
-                $subDatas += $this->GenerateForm->getForm($setings['target_type'], $CloneBlockContent->bundle(), 'default', $CloneBlockContent);
+              break;
+            case 'node':
+              foreach ($vals as $value) {
+                $node = Node::load($value['target_id']);
+                if ($node) {
+                  $node = $this->getEntityTranslate($node);
+                  if ($duplicate) {
+                    $cloneNode = $node->createDuplicate();
+                    // On ajoute le champs field_domain_access; ci-possible.
+                    if (self::$field_domain_access && $cloneNode->hasField(self::$field_domain_access) && $entity->hasField(self::$field_domain_access)) {
+                      $cloneNode->set(self::$field_domain_access, $entity->get(self::$field_domain_access)->getValue());
+                    }
+                    // on met à jour l'id de lutilisateur.
+                    $cloneNode->setOwnerId($uid);
+                  }
+                  else
+                    $cloneNode = $node;
+                  
+                  $subDatas = $setings;
+                  $subDatas['target_id'] = $value['target_id'];
+                  $ar = $cloneNode->toArray();
+                  $subDatas['entity'] = $this->toArrayLayoutBuilderField($ar);
+                  $subDatas['entities'] = [];
+                  // On ajoute le formulaire si necessaire :
+                  if ($add_form) {
+                    $subDatas += $this->GenerateForm->getForm($setings['target_type'], $cloneNode->bundle(), 'default', $cloneNode);
+                  }
+                  // On verifie pour les sous entites.
+                  $this->duplicateExistantReference($node, $subDatas['entities'], $duplicate, $add_form);
+                  $datasJson[$k][] = $subDatas;
+                }
               }
-              // $CloneBlockContent->save();
-              $datasJson[$k][] = $subDatas;
-            }
-          }
-        }
-        // Dupliquer les produits.
-        elseif (!empty($setings['target_type']) && $setings['target_type'] == 'commerce_product') {
-          foreach ($vals as $value) {
+              break;
+            case 'blocks_contents':
+              foreach ($vals as $value) {
+                $BlocksContents = BlocksContents::load($value['target_id']);
+                if ($BlocksContents) {
+                  if ($duplicate) {
+                    $BlocksContents = $this->getEntityTranslate($BlocksContents);
+                    $cloneBlocksContents = $BlocksContents->createDuplicate();
+                    // On ajoute le champs field_domain_access; ci-possible.
+                    if (self::$field_domain_access && $cloneBlocksContents->hasField(self::$field_domain_access) && $entity->hasField(self::$field_domain_access)) {
+                      $cloneBlocksContents->set(self::$field_domain_access, $entity->get(self::$field_domain_access)->getValue());
+                    }
+                    // on met à jour l'id de lutilisateur.
+                    $cloneBlocksContents->setOwnerId($uid);
+                  }
+                  else
+                    $cloneBlocksContents = $BlocksContents;
+                  $subDatas = $setings;
+                  $subDatas['target_id'] = $value['target_id'];
+                  $ar = $cloneBlocksContents->toArray();
+                  $subDatas['entity'] = $this->toArrayLayoutBuilderField($ar);
+                  $subDatas['entities'] = [];
+                  // On ajoute le formulaire si necessaire :
+                  if ($add_form) {
+                    $subDatas += $this->GenerateForm->getForm($setings['target_type'], $cloneBlocksContents->bundle(), 'default', $cloneBlocksContents);
+                  }
+                  // On verifie pour les sous entites.
+                  $this->duplicateExistantReference($BlocksContents, $subDatas['entities'], $duplicate, $add_form);
+                  $datasJson[$k][] = $subDatas;
+                }
+              }
+              break;
+            case 'commerce_store':
+              foreach ($vals as $value) {
+                $Store = \Drupal\commerce_store\Entity\Store::load($value['target_id']);
+                if ($Store) {
+                  if ($duplicate) {
+                    $Store = $this->getEntityTranslate($Store);
+                    $cloneStore = $Store->createDuplicate();
+                    // On ajoute le champs field_domain_access; ci-possible.
+                    if (self::$field_domain_access && $cloneStore->hasField(self::$field_domain_access) && $entity->hasField(self::$field_domain_access)) {
+                      $cloneStore->set(self::$field_domain_access, $entity->get(self::$field_domain_access)->getValue());
+                    }
+                    // on met à jour l'id de lutilisateur.
+                    $cloneStore->setOwnerId($uid);
+                  }
+                  else
+                    $cloneStore = $Store;
+                  $subDatas = $setings;
+                  $subDatas['target_id'] = $value['target_id'];
+                  $ar = $cloneStore->toArray();
+                  $subDatas['entity'] = $this->toArrayLayoutBuilderField($ar);
+                  $subDatas['entities'] = [];
+                  // On ajoute le formulaire si necessaire :
+                  if ($add_form) {
+                    $subDatas += $this->GenerateForm->getForm($setings['target_type'], $cloneStore->bundle(), 'default', $cloneStore);
+                  }
+                  // On verifie pour les sous entites.
+                  $this->duplicateExistantReference($Store, $subDatas['entities'], $duplicate, $add_form);
+                  $datasJson[$k][] = $subDatas;
+                }
+              }
+              break;
             /**
-             *
-             * @var \Drupal\commerce_product\Entity\Product $Product
+             * Ce cas de figure est particulier, car on souhaite recuperer les
+             * items
+             * en relation avec l'id du menu.
+             * Ceci est utile pour le module export_import.
              */
-            $Product = Product::load($value['target_id']);
-            if ($Product) {
-              $Product = $this->getEntityTranslate($Product);
-              // ///
-              if ($duplicate) {
-                $CloneProduct = $Product->createDuplicate();
-                // On ajoute le champs field_domain_access; ci-possible.
-                if (self::$field_domain_access && $entity->hasField(self::$field_domain_access)) {
-                  $dmn = $entity->get(self::$field_domain_access)->first()->getValue();
-                  $dmn = empty($dmn['target_id']) ? null : $dmn['target_id'];
-                  if ($dmn)
-                    $CloneProduct->set(self::$field_domain_access, $dmn);
+            case 'menu':
+              foreach ($vals as $value) {
+                $menuItems = $this->entityTypeManager()->getStorage('menu_link_content')->loadByProperties([
+                  'menu_name' => $value['target_id']
+                ]);
+                $subDatas = $setings;
+                $subDatas['target_id'] = $value['target_id'];
+                $menu = \Drupal\system\Entity\Menu::load($value['target_id']);
+                $subDatas['entity'] = $menu->toArray();
+                $subDatas['entities'] = [];
+                // On recupere chaque element item du menu.
+                foreach ($menuItems as $menuItem) {
+                  $id_item_menu = $menuItem->id();
+                  $subDatas['entities']['item--' . $id_item_menu][] = [
+                    'target_id' => $menuItem->id(),
+                    'entity' => $menuItem->toArray(),
+                    'target_type' => 'menu_link_content'
+                  ];
                 }
-                // on met à jour l'id de lutilisateur.
-                $CloneProduct->setOwnerId($uid);
+                $datasJson[$k][] = $subDatas;
               }
-              else
-                $CloneProduct = $Product;
-              $subDatas = $setings;
-              $subDatas['target_id'] = $value['target_id'];
-              $this->duplicateProduct($Product, $CloneProduct, $duplicate, $uid, $subDatas);
-              // On ajoute le formulaire si necessaire :
-              if ($add_form) {
-                $subDatas += $this->GenerateForm->getForm($setings['target_type'], $CloneProduct->bundle(), 'default', $CloneProduct);
-              }
-              // On verifie pour les sous entites.
-              $this->duplicateExistantReference($Product, $subDatas['entities'], $duplicate, $add_form);
-              $datasJson[$k][] = $subDatas;
-            }
-          }
-        }
-        /**
-         * Duplication des variations de produits.
-         * On ne peut lancer les verifications des entites de
-         * variation (i.e $this->duplicateExistantReference), sinon cela
-         * entrainne une boucle infinie en produit et variations.
-         */
-        elseif (!empty($setings['target_type']) && $setings['target_type'] == 'commerce_product_variation' && $k != 'default_variation') {
-          foreach ($vals as $value) {
-            $ProductVariation = ProductVariation::load($value['target_id']);
-            if ($ProductVariation) {
-              $ProductVariation = $this->getEntityTranslate($ProductVariation);
-              /**
-               * On ne duplique pas les variations à ce niveau,
-               * Elle permet principalement d'inclure la variation dans le
-               * formulaire d'edition.
-               */
-              $CloneProductVariation = $ProductVariation;
-              
-              $subDatas = $setings;
-              $subDatas['target_id'] = $value['target_id'];
-              $ar = $CloneProductVariation->toArray();
-              $subDatas['entity'] = $this->toArrayLayoutBuilderField($ar);
-              $subDatas['entities'] = [];
-              // On ajoute le formulaire si necessaire :
-              if ($add_form) {
-                $subDatas += $this->GenerateForm->getForm($setings['target_type'], $CloneProductVariation->bundle(), 'default', $CloneProductVariation);
-              }
-              /**
-               * On duplique ou ajoute le formulaire pour les entites
-               * importantes.
-               */
-              $datasJson[$k][] = $subDatas;
-            }
-          }
-        }
-        /**
-         * Recuperation des entites de configurations.
-         */
-        elseif (!empty($setings['target_type']) && $setings['target_type'] == 'commerce_store_type') {
-          $ortherEntityConfig = $this->entityTypeManager()->getStorage($setings['target_type']) ? $this->entityTypeManager()->getStorage($setings['target_type'])->load($value['target_id']) : null;
-          if ($ortherEntityConfig) {
-            $subDatas = $setings;
-            $subDatas['target_id'] = $value['target_id'];
-            $subDatas['entity'] = $ortherEntityConfig->toArray();
-            $subDatas['entities'] = [];
-            $datasJson[$k][] = $subDatas;
-          }
-        }
-        /**
-         * Duplication des autres entites storages necesaires.
-         */
-        elseif (!empty($setings['target_type']) && ($setings['target_type'] == 'commerce_product_attribute_value' || $setings['target_type'] == 'commerce_product_attribute' || $setings['target_type'] == 'commerce_currency' || $setings['target_type'] == 'taxonomy_term')) {
-          foreach ($vals as $value) {
-            $ortherEntity = $this->entityTypeManager()->getStorage($setings['target_type']) ? $this->entityTypeManager()->getStorage($setings['target_type'])->load($value['target_id']) : null;
-            if ($ortherEntity && $ortherEntity instanceof ContentEntityBase) {
-              if ($duplicate) {
-                $ortherEntity = $this->getEntityTranslate($ortherEntity);
-                $cloneOrtherEntity = $ortherEntity->createDuplicate();
-                // On ajoute le champs field_domain_access; ci-possible.
-                if (self::$field_domain_access && $cloneOrtherEntity->hasField(self::$field_domain_access) && $entity->hasField(self::$field_domain_access)) {
-                  $cloneOrtherEntity->set(self::$field_domain_access, $entity->get(self::$field_domain_access)->getValue());
+              break;
+            case 'webform':
+              foreach ($vals as $value) {
+                $Webform = \Drupal\webform\Entity\Webform::load($value['target_id']);
+                if ($Webform && $duplicate) {
+                  /**
+                   * Les webforms ont un comportement assez differents des
+                   * autres
+                   * entitées.
+                   * il faut globalement construire le tableau avant de
+                   * renvoyer.
+                   * RQ1 : Certaines données (titre, description ...) sont
+                   * automatquement traduit en function de la langue.
+                   */
+                  if ($Webform->getLangcode() != $this->getLangCode()) {
+                    /**
+                     * On recupere les elements non traduit et on injecte dans
+                     * la
+                     * conf.
+                     *
+                     * @var \Drupal\webform\WebformTranslationManager $wftm
+                     */
+                    $wftm = \Drupal::service('webform.translation_manager');
+                    $elementsTranslate = $wftm->getTranslationElements($Webform, $this->getLangCode());
+                    $elementsMerge = NestedArray::mergeDeepArray([
+                      $Webform->getElementsDecoded(),
+                      $elementsTranslate
+                    ]);
+                    $Webform->setElements($elementsMerge);
+                  }
+                  $CloneWebform = $Webform->createDuplicate();
+                  // Pour les webforms, on doit ajouter le ThirdParty.
+                  $domaine = 'Generate';
+                  if (self::$field_domain_access) {
+                    $domaine = $entity->get(self::$field_domain_access)->target_id;
+                    $CloneWebform->setThirdPartySetting('webform_domain_access', self::$field_domain_access, $domaine);
+                  }
+                  $CloneWebform->set('title', $domaine . ' : ' . $CloneWebform->get('title'));
+                  $CloneWebform->set('id', substr($Webform->id(), 0, 10) . date('YMdi') . rand(0, 9999));
+                  //
+                  $subDatas = $setings;
+                  $subDatas['target_id'] = $value['target_id'];
+                  $subDatas['entity'] = $CloneWebform->toArray();
+                  //
+                  if ($subDatas['entity']['langcode'] != $this->getLangCode()) {
+                    $subDatas['entity']['langcode'] = $this->getLangCode();
+                  }
+                  $subDatas['entities'] = [];
+                  // $CloneWebform->save();
+                  $datasJson[$k][] = $subDatas;
                 }
-                // on met à jour l'id de lutilisateur.
-                $cloneOrtherEntity->setOwnerId($uid);
               }
-              else
-                $cloneOrtherEntity = $ortherEntity;
-              $subDatas = $setings;
-              $subDatas['target_id'] = $value['target_id'];
-              $ar = $cloneOrtherEntity->toArray();
-              $subDatas['entity'] = $this->toArrayLayoutBuilderField($ar);
-              $subDatas['entities'] = [];
-              // On ajoute le formulaire si necessaire :
-              if ($add_form) {
-                $subDatas += $this->GenerateForm->getForm($setings['target_type'], $cloneOrtherEntity->bundle(), 'default', $cloneOrtherEntity);
+              break;
+            case 'block_content':
+              $newBlockIds = [];
+              foreach ($vals as $value) {
+                $BlockContent = BlockContent::load($value['target_id']);
+                if ($BlockContent) {
+                  $BlockContent = $this->getEntityTranslate($BlockContent);
+                  if ($duplicate) {
+                    $CloneBlockContent = $BlockContent->createDuplicate();
+                    // On ajoute le champs field_domain_access; ci-possible.
+                    if (self::$field_domain_access && $CloneBlockContent->hasField(self::$field_domain_access) && $entity->hasField(self::$field_domain_access)) {
+                      $dmn = $entity->get(self::$field_domain_access)->first()->getValue();
+                      if ($dmn)
+                        $CloneBlockContent->get(self::$field_domain_access)->setValue($dmn);
+                    }
+                    // On ajoute l'utilisateur courant:
+                    if ($CloneBlockContent->hasField('user_id') && $uid) {
+                      $CloneBlockContent->set('user_id', $uid);
+                    }
+                    // On met jour la date de MAJ
+                    if ($CloneBlockContent->hasField('changed')) {
+                      $CloneBlockContent->set('changed', time());
+                    }
+                    //
+                    // On met à jour le champs info (car sa valeur doit etre
+                    // unique).
+                    if ($CloneBlockContent->hasField("info")) {
+                      $val = '';
+                      if ($CloneBlockContent->get('info')->first())
+                        $val = $CloneBlockContent->get('info')->first()->getValue();
+                      $dmn = '';
+                      if (self::$field_domain_access && $entity->hasField(self::$field_domain_access)) {
+                        $dmn = $entity->get(self::$field_domain_access)->first()->getValue();
+                        $dmn = empty($dmn['target_id']) ? 'domaine.test' : $dmn['target_id'];
+                        $dmn = $dmn . ' : ';
+                      }
+                      $val = $dmn . $CloneBlockContent->get('type')->target_id;
+                      $CloneBlockContent->get('info')->setValue([
+                        'value' => $val . ' : ' . count($newBlockIds)
+                      ]);
+                    }
+                  }
+                  else
+                    $CloneBlockContent = $BlockContent;
+                  //
+                  $subDatas = $setings;
+                  $subDatas['target_id'] = $value['target_id'];
+                  $ar = $CloneBlockContent->toArray();
+                  $subDatas['entity'] = $this->toArrayLayoutBuilderField($ar);
+                  $subDatas['entities'] = [];
+                  // On ajoute le formulaire si necessaire :
+                  if ($add_form) {
+                    $subDatas += $this->GenerateForm->getForm($setings['target_type'], $CloneBlockContent->bundle(), 'default', $CloneBlockContent);
+                  }
+                  // $CloneBlockContent->save();
+                  $datasJson[$k][] = $subDatas;
+                }
               }
-              // On verifie pour les sous entites.
-              $this->duplicateExistantReference($ortherEntity, $subDatas['entities'], $duplicate, $add_form);
-              $datasJson[$k][] = $subDatas;
-            }
+              break;
+            case 'commerce_product':
+              foreach ($vals as $value) {
+                /**
+                 *
+                 * @var \Drupal\commerce_product\Entity\Product $Product
+                 */
+                $Product = Product::load($value['target_id']);
+                if ($Product) {
+                  $Product = $this->getEntityTranslate($Product);
+                  // ///
+                  if ($duplicate) {
+                    $CloneProduct = $Product->createDuplicate();
+                    // On ajoute le champs field_domain_access; ci-possible.
+                    if (self::$field_domain_access && $entity->hasField(self::$field_domain_access)) {
+                      $dmn = $entity->get(self::$field_domain_access)->first()->getValue();
+                      $dmn = empty($dmn['target_id']) ? null : $dmn['target_id'];
+                      if ($dmn)
+                        $CloneProduct->set(self::$field_domain_access, $dmn);
+                    }
+                    // on met à jour l'id de lutilisateur.
+                    $CloneProduct->setOwnerId($uid);
+                  }
+                  else
+                    $CloneProduct = $Product;
+                  $subDatas = $setings;
+                  $subDatas['target_id'] = $value['target_id'];
+                  $this->duplicateProduct($Product, $CloneProduct, $duplicate, $uid, $subDatas);
+                  // On ajoute le formulaire si necessaire :
+                  if ($add_form) {
+                    $subDatas += $this->GenerateForm->getForm($setings['target_type'], $CloneProduct->bundle(), 'default', $CloneProduct);
+                  }
+                  // On verifie pour les sous entites.
+                  $this->duplicateExistantReference($Product, $subDatas['entities'], $duplicate, $add_form);
+                  $datasJson[$k][] = $subDatas;
+                }
+              }
+              break;
+            /**
+             * Duplication des variations de produits.
+             * On ne peut lancer les verifications des entites de
+             * variation (i.e $this->duplicateExistantReference), sinon cela
+             * entrainne une boucle infinie en produit et variations.
+             */
+            case 'commerce_product_variation':
+              if ($k != 'default_variation') {
+                foreach ($vals as $value) {
+                  $ProductVariation = ProductVariation::load($value['target_id']);
+                  if ($ProductVariation) {
+                    $ProductVariation = $this->getEntityTranslate($ProductVariation);
+                    /**
+                     * On ne duplique pas les variations à ce niveau,
+                     * Elle permet principalement d'inclure la variation dans le
+                     * formulaire d'edition.
+                     */
+                    $CloneProductVariation = $ProductVariation;
+                    
+                    $subDatas = $setings;
+                    $subDatas['target_id'] = $value['target_id'];
+                    $ar = $CloneProductVariation->toArray();
+                    $subDatas['entity'] = $this->toArrayLayoutBuilderField($ar);
+                    $subDatas['entities'] = [];
+                    // On ajoute le formulaire si necessaire :
+                    if ($add_form) {
+                      $subDatas += $this->GenerateForm->getForm($setings['target_type'], $CloneProductVariation->bundle(), 'default', $CloneProductVariation);
+                    }
+                    /**
+                     * On duplique ou ajoute le formulaire pour les entites
+                     * importantes.
+                     */
+                    $datasJson[$k][] = $subDatas;
+                  }
+                }
+              }
+              break;
+            /**
+             * Recuperation des entites de configurations.
+             */
+            case 'commerce_store_type':
+            case 'taxonomy_vocabulary':
+              $ortherEntityConfig = $this->entityTypeManager()->getStorage($setings['target_type']) ? $this->entityTypeManager()->getStorage($setings['target_type'])->load($value['target_id']) : null;
+              if ($ortherEntityConfig) {
+                $subDatas = $setings;
+                $subDatas['target_id'] = $value['target_id'];
+                $subDatas['entity'] = $ortherEntityConfig->toArray();
+                $subDatas['entities'] = [];
+                $datasJson[$k][] = $subDatas;
+              }
+              break;
+            /**
+             * Duplication des autres entites storages necesaires.
+             */
+            case 'commerce_product_attribute_value':
+            case 'commerce_product_attribute':
+            case 'commerce_currency':
+            case 'taxonomy_term':
+              foreach ($vals as $value) {
+                $ortherEntity = $this->entityTypeManager()->getStorage($setings['target_type']) ? $this->entityTypeManager()->getStorage($setings['target_type'])->load($value['target_id']) : null;
+                if ($ortherEntity && $ortherEntity instanceof ContentEntityBase) {
+                  if ($duplicate) {
+                    $ortherEntity = $this->getEntityTranslate($ortherEntity);
+                    $cloneOrtherEntity = $ortherEntity->createDuplicate();
+                    // On ajoute le champs field_domain_access; ci-possible.
+                    if (self::$field_domain_access && $cloneOrtherEntity->hasField(self::$field_domain_access) && $entity->hasField(self::$field_domain_access)) {
+                      $cloneOrtherEntity->set(self::$field_domain_access, $entity->get(self::$field_domain_access)->getValue());
+                    }
+                    // on met à jour l'id de lutilisateur.
+                    $cloneOrtherEntity->setOwnerId($uid);
+                  }
+                  else
+                    $cloneOrtherEntity = $ortherEntity;
+                  $subDatas = $setings;
+                  $subDatas['target_id'] = $value['target_id'];
+                  $ar = $cloneOrtherEntity->toArray();
+                  $subDatas['entity'] = $this->toArrayLayoutBuilderField($ar);
+                  $subDatas['entities'] = [];
+                  // On ajoute le formulaire si necessaire :
+                  if ($add_form) {
+                    $subDatas += $this->GenerateForm->getForm($setings['target_type'], $cloneOrtherEntity->bundle(), 'default', $cloneOrtherEntity);
+                  }
+                  // On verifie pour les sous entites.
+                  $this->duplicateExistantReference($ortherEntity, $subDatas['entities'], $duplicate, $add_form);
+                  $datasJson[$k][] = $subDatas;
+                }
+              }
+              break;
+            default:
+              $message = " Entité non traitée, field :" . $k . ', type : ' . $setings['target_type'];
+              $this->messenger()->addError($message);
+              \Drupal::logger('apivuejs')->alert($message);
+              break;
           }
-        }
-        else {
-          $message = " Entité non traitée, field :" . $k . ', type : ' . $setings['target_type'];
-          $this->messenger()->addError($message);
-          \Drupal::logger('vuejs_entity')->alert($message);
-        }
       }
       /**
        * Error 1: Le champs layout_builder__layout ne se duplique pas le contenu
