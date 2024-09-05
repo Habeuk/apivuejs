@@ -68,9 +68,7 @@ class DuplicateEntityReference extends ControllerBase {
     'domain',
     'paragraphs_type',
     'site_internet_entity_type',
-    'taxonomy_term',
     'file',
-    'commerce_store',
     'commerce_product_type',
     'node_type',
     'blocks_contents_type'
@@ -527,6 +525,38 @@ class DuplicateEntityReference extends ControllerBase {
             }
           }
         }
+        elseif (!empty($setings['target_type']) && $setings['target_type'] == 'commerce_store') {
+          foreach ($vals as $value) {
+            $Store = \Drupal\commerce_store\Entity\Store::load($value['target_id']);
+            if ($Store) {
+              if ($duplicate) {
+                $Store = $this->getEntityTranslate($Store);
+                $cloneStore = $Store->createDuplicate();
+                // On ajoute le champs field_domain_access; ci-possible.
+                if (self::$field_domain_access && $cloneStore->hasField(self::$field_domain_access) && $entity->hasField(self::$field_domain_access)) {
+                  $cloneStore->set(self::$field_domain_access, $entity->get(self::$field_domain_access)->getValue());
+                }
+                // on met à jour l'id de lutilisateur.
+                $cloneStore->setOwnerId($uid);
+              }
+              else
+                $cloneStore = $Store;
+              $subDatas = $setings;
+              $subDatas['target_id'] = $value['target_id'];
+              $ar = $cloneStore->toArray();
+              $subDatas['entity'] = $this->toArrayLayoutBuilderField($ar);
+              $subDatas['entities'] = [];
+              // On ajoute le formulaire si necessaire :
+              if ($add_form) {
+                $subDatas += $this->GenerateForm->getForm($setings['target_type'], $cloneStore->bundle(), 'default', $cloneStore);
+              }
+              // On verifie pour les sous entites.
+              $this->duplicateExistantReference($Store, $subDatas['entities'], $duplicate, $add_form);
+              $datasJson[$k][] = $subDatas;
+            }
+          }
+        }
+        
         /**
          * Ce cas de figure est particulier, car on souhaite recuperer les items
          * en relation avec l'id du menu.
@@ -540,7 +570,6 @@ class DuplicateEntityReference extends ControllerBase {
             $subDatas = $setings;
             $subDatas['target_id'] = $value['target_id'];
             $menu = \Drupal\system\Entity\Menu::load($value['target_id']);
-            // est que 2 menu seront creer ou il va buguer.
             $subDatas['entity'] = $menu->toArray();
             $subDatas['entities'] = [];
             // On recupere chaque element item du menu.
@@ -559,46 +588,6 @@ class DuplicateEntityReference extends ControllerBase {
         elseif (!empty($setings['target_type']) && $setings['target_type'] == 'webform') {
           foreach ($vals as $value) {
             $Webform = \Drupal\webform\Entity\Webform::load($value['target_id']);
-            // dump($value['target_id']);
-            // /**
-            // *
-            // * @var \Drupal\locale\LocaleConfigManager $local_config_manager
-            // */
-            // $local_config_manager =
-            // \Drupal::service('locale.config_manager');
-            // // dump($local_config_manager->get
-            // /**
-            // *
-            // * @var \Drupal\language\ConfigurableLanguageManagerInterface
-            // $language_manager
-            // */
-            // $language_manager = \Drupal::service('language_manager');
-            // /**
-            // *
-            // * @var \Drupal\language\Config\LanguageConfigOverride $config
-            // */
-            // $config =
-            // $language_manager->getLanguageConfigOverride($this->getLangCode(),
-            // $Webform->getConfigDependencyName());
-            // dump($config->get('elements'));
-            // dump($Webform->getElementsRaw());
-            // dump($Webform->getElementsDecoded());
-            // // NestedArray::mergeDeepArray([]);
-            // /**
-            // *
-            // * @var \Drupal\webform\WebformTranslationManager $wftm
-            // */
-            // $wftm = \Drupal::service('webform.translation_manager');
-            // $elementsTranslate = $wftm->getTranslationElements($Webform,
-            // $this->getLangCode());
-            // $elementsMerge = NestedArray::mergeDeepArray([
-            // $Webform->getElementsDecoded(),
-            // $elementsTranslate
-            // ]);
-            // $Webform->setElements($elementsMerge);
-            // dump($Webform->toArray());
-            
-            //
             if ($Webform && $duplicate) {
               /**
                * Les webforms ont un comportement assez differents des autres
@@ -706,18 +695,6 @@ class DuplicateEntityReference extends ControllerBase {
         }
         // Dupliquer les produits.
         elseif (!empty($setings['target_type']) && $setings['target_type'] == 'commerce_product') {
-          /**
-           * Doit se faire ailleurs.
-           */
-          // Pour le type produit, on doit Ajouter le role à l'utilisateur.
-          // if (!empty($this->currentUser()->id()) &&
-          // !in_array('manage_ecommerce', $this->currentUser()->getRoles())) {
-          // $user = \Drupal\user\Entity\User::load($this->currentUser->id());
-          // $user->addRole('manage_ecommerce');
-          // $user->save();
-          // $this->messenger()->addMessage(' Le role vendor a été
-          // automatiquement ajouté ');
-          // }
           foreach ($vals as $value) {
             /**
              *
@@ -751,10 +728,6 @@ class DuplicateEntityReference extends ControllerBase {
               // On verifie pour les sous entites.
               $this->duplicateExistantReference($Product, $subDatas['entities'], $duplicate, $add_form);
               $datasJson[$k][] = $subDatas;
-              //
-              // $newProducts[] = [
-              // 'target_id' => $cloneProducdId
-              // ];
             }
           }
         }
@@ -794,9 +767,22 @@ class DuplicateEntityReference extends ControllerBase {
           }
         }
         /**
-         * Duplication des autres entites necesaires.
+         * Recuperation des entites de configurations.
          */
-        elseif (!empty($setings['target_type']) && ($setings['target_type'] == 'commerce_product_attribute_value' || $setings['target_type'] == 'commerce_product_attribute')) {
+        elseif (!empty($setings['target_type']) && $setings['target_type'] == 'commerce_store_type') {
+          $ortherEntityConfig = $this->entityTypeManager()->getStorage($setings['target_type']) ? $this->entityTypeManager()->getStorage($setings['target_type'])->load($value['target_id']) : null;
+          if ($ortherEntityConfig) {
+            $subDatas = $setings;
+            $subDatas['target_id'] = $value['target_id'];
+            $subDatas['entity'] = $ortherEntityConfig->toArray();
+            $subDatas['entities'] = [];
+            $datasJson[$k][] = $subDatas;
+          }
+        }
+        /**
+         * Duplication des autres entites storages necesaires.
+         */
+        elseif (!empty($setings['target_type']) && ($setings['target_type'] == 'commerce_product_attribute_value' || $setings['target_type'] == 'commerce_product_attribute' || $setings['target_type'] == 'commerce_currency' || $setings['target_type'] == 'taxonomy_term')) {
           foreach ($vals as $value) {
             $ortherEntity = $this->entityTypeManager()->getStorage($setings['target_type']) ? $this->entityTypeManager()->getStorage($setings['target_type'])->load($value['target_id']) : null;
             if ($ortherEntity && $ortherEntity instanceof ContentEntityBase) {
