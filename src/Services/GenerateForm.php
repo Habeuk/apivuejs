@@ -218,5 +218,4 @@ class GenerateForm extends ControllerBase {
     }
     return $entity;
   }
-  
 }
