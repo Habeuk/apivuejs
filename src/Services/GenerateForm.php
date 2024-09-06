@@ -193,7 +193,8 @@ class GenerateForm extends ControllerBase {
       'entity' => $fields, // Contient les données qui vont etre MAJ.
       'form_sort' => $form_sort, // contient les champs rangés.
       'target_type' => $entity_type_id, // l'id de l'entité.
-      'label' => $entity->label()
+      'label' => $entity->label(),
+      'target_id' => $entity->id()
     ];
   }
   
