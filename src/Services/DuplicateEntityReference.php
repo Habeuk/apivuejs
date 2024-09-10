@@ -283,7 +283,7 @@ class DuplicateEntityReference extends ControllerBase {
         }
       }
       //get translation
-      $defaultLangcode = $entity->language()->getId();
+      $defaultLangcode = $this->languageManager()->getCurrentLanguage()->getId();
       $entityLanguages = $entity->getTranslationLanguages();
       unset($entityLanguages[$defaultLangcode]);
 
