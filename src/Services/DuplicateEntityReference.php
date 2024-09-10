@@ -148,10 +148,11 @@ class DuplicateEntityReference extends ControllerBase {
    *
    * @return array
    *   Returns the combined translated configuration as an object.
+   * @deprecated all the language are generated so with another logic and this shouldn't be used anymore
    */
   public function getTranslatedConfig($configName, $langCode = NULL) {
     if (empty($langCode)) {
-      $langCode = $this->languageManager()->getDefaultLanguage()->getId();
+      $langCode = $this->languageManager()->getCurrentLanguage()->getId();
     }
     $originalConfig = $this->configStorage->read($configName);
     if (!$originalConfig) {
@@ -193,6 +194,23 @@ class DuplicateEntityReference extends ControllerBase {
   }
 
   /**
+   * Copie the translated $lancode version of  sourceName config 
+   * in the $langcode version of targetName config 
+   * @param string $targetName 
+   * @param string $sourceName 
+   * @param string $langcode
+   */
+  public function setTranslatedConfig($targetName, $sourceName, $langcode) {
+    $sourceConfigs = $this->languageManager()->getLanguageConfigOverride($langcode, $sourceName)->get();
+    /**
+     * @var \Drupal\language\Config\LanguageConfigOverride $targetConfig
+     */
+    $targetConfig = $this->languageManager()->getLanguageConfigOverride($langcode, $targetName);
+    $targetConfig->setData($sourceConfigs);
+    $targetConfig->save();
+  }
+
+  /**
    * Permet de dupliquer une entité si $duplicate=true et uniquement les sous
    * entitées dans le cas contraire.
    * Cette logique est adapté pour un environnement restant sur Drupal.
@@ -211,26 +229,28 @@ class DuplicateEntityReference extends ControllerBase {
     $EntityTypeId = $entity->getEntityTypeId();
     if ($duplicate && $EntityTypeId == 'commerce_product') {
       $newEntity = $this->duplicateProductEntity($entity);
-    } elseif ($duplicate && $EntityTypeId == "webform") {
-      // dd($entity);
-      $formManager = $this->entityTypeManager()->getStorage("webform");
-      $configName = $this->entityTypeManager()->getDefinition("webform")->getConfigPrefix() . '.' . $entity->id();
-      $configs = $this->getTranslatedConfig($configName);
-      $configs["id"] = \strtolower(substr($entity->id(), 0, 10) . date('mdi') . rand(0, 9999));
-      unset($configs["uuid"]);
-      $newEntity = $formManager->create($configs);
     } elseif ($duplicate) {
       $newEntity = $entity->createDuplicate();
     } else {
       $newEntity = $entity;
     }
 
+
+
+
     if ($EntityTypeId == 'webform') {
       if (\Drupal::moduleHandler()->moduleExists('webform_domain_access') && !empty($setFields[self::$field_domain_access])) {
         $newEntity->setThirdPartySetting('webform_domain_access', self::$field_domain_access, $setFields[self::$field_domain_access]);
       }
-      // $newEntity->set("id", \strtolower(substr($entity->id(), 0, 10) . date('mdi') . rand(0, 9999)));
+      $newEntity->set("id", \strtolower(substr($entity->id(), 0, 10) . date('mdi') . rand(0, 9999)));
       $newEntity->save();
+      $sourceConfigName = $this->entityTypeManager()->getDefinition("webform")->getConfigPrefix() . '.' . $entity->id();
+      $configName = $this->entityTypeManager()->getDefinition("webform")->getConfigPrefix() . '.' . $newEntity->id();
+      foreach ($this->languageManager()->getLanguages() as $langcode => $language) {
+        if ($newEntity->language()->getId() !== $langcode) {
+          $this->setTranslatedConfig($configName, $sourceConfigName, $langcode);
+        }
+      }
     } elseif ($newEntity instanceof ContentEntityBase) {
       $this->DefaultUpdateEntity($newEntity);
       if ($setFields)
@@ -266,6 +286,19 @@ class DuplicateEntityReference extends ControllerBase {
                 $newEntity_translation->set($field_name, $valueList);
               }
             }
+          }
+        }
+      }
+      //get translation
+      $defaultLangcode = $entity->language()->getId();
+      $entityLanguages = $entity->getTranslationLanguages();
+      unset($entityLanguages[$defaultLangcode]);
+
+      foreach ($entityLanguages as $langcode => $language) {
+        if ($entity->hasTranslation($langcode)) {
+          $translationSource = $entity->getTranslation($langcode)->toArray();
+          if (!$newEntity->hasTranslation($langcode)) {
+            $newEntity->addTranslation($langcode, $translationSource);
           }
         }
       }
