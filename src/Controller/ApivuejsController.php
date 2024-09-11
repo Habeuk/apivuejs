@@ -14,6 +14,8 @@ use Stephane888\DrupalUtility\HttpResponse;
 use Stephane888\Debug\ExceptionExtractMessage;
 use Drupal\apivuejs\Services\DuplicateEntityReference;
 use Drupal\apivuejs\Services\GenerateForm;
+use Drupal\Component\Serialization\Yaml;
+
 
 /**
  * Returns responses for Api vuejs routes.
@@ -136,6 +138,28 @@ class ApivuejsController extends ControllerBase {
           // cest un nouveau contenu, ( les ids pour les entities de
           // configuration sont generalment generer en amont ).
           else {
+            if ($entity_type_id == "webform") {
+              //Add translation
+              if (isset($datas["translations"])) {
+                foreach ($datas["translations"] as $langcode => $translated_values) {
+                  if (!$entity->hasTranslation($langcode) && $entity->getLangcode() != $langcode) {
+
+                    /**
+                     * @var \Drupal\webform\Entity\Webform $entity
+                     */
+                    $configName = $entity->getConfigDependencyName();
+                    /**
+                     * @var \Drupal\language\Config\LanguageConfigOverride $translationSettings
+                     */
+                    $translationSettings = $this->languageManager()->getLanguageConfigOverride($langcode, $configName);
+                    $translationSettings->setData([
+                      "elements" => Yaml::encode($datas["translations"][$langcode])
+                    ]);
+                    $translationSettings->save();
+                  }
+                }
+              }
+            }
             $entity->save();
             return HttpResponse::response([
               'id' => $entity->id(),
