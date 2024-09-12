@@ -513,10 +513,10 @@ class ApivuejsController extends ControllerBase {
         throw new \Exception(" Le type d'entité n'exsite pas : " . $entity_type_id);
       $entity = $EntityStorage->load($entity_id);
       if ($entity) {
-        return [
+        return HttpResponse::response([
           'entity' => $entity->toArray(),
           'translations' => $this->getTranslations($entity)
-        ];
+        ]);
       }
       throw new \Exception("L'entite n'existe pas : " . $entity_id);
     }
