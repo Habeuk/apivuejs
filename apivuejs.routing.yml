@@ -52,6 +52,16 @@ apivuejs.add.entity:
   options:
       _auth: ['basic_auth', 'cookie']
 
+apivuejs.entity.canonical:
+  path: '/apivuejs/canonical-entity/{entity_type_id}/{entity_id}'
+  defaults:
+    _title: 'canonical entitie'
+    _controller: '\Drupal\apivuejs\Controller\ApivuejsController::ContentEntity'
+  requirements:
+    _permission: 'canonical apivuejs entities'
+  options:
+      _auth: ['basic_auth', 'cookie']
+
 apivuejs.settings_form:
   path: '/admin/config/system/apivuejs'
   defaults:
