@@ -67,12 +67,10 @@ class ApivuejsController extends ControllerBase {
    */
   public function saveEntity(Request $Request, $entity_type_id): \Symfony\Component\HttpFoundation\JsonResponse {
     $EntityStorage = $this->entityTypeManager()->getStorage($entity_type_id);
-    $datas = Json::decode($Request->getContent());
-    $values = $datas["entity"] ?? $datas;
-    $this->getLayoutBuilderField($values);
-    //
-    if ($EntityStorage && !empty($values)) {
+    if ($EntityStorage) {
       try {
+        $values = $this->extractEntity($Request);
+        $this->getLayoutBuilderField($values);
         /**
          * --
          *
@@ -526,6 +524,17 @@ class ApivuejsController extends ControllerBase {
     catch (\Error $e) {
       return HttpResponse::response(ExceptionExtractMessage::errorAll($e), 435, $e->getMessage());
     }
+  }
+  
+  /**
+   * Permet d'extraire les données de la requete.
+   *
+   * @param Request $Request
+   * @return Array|false
+   */
+  protected function extractEntity(Request $Request) {
+    $datas = Json::decode($Request->getContent());
+    return $datas["entity"] ?? $datas;
   }
   
   /**
