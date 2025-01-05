@@ -203,7 +203,10 @@ class ApivuejsController extends ControllerBase {
       }
       catch (ExceptionDebug $e) {
         $this->getLogger('apivuejs')->critical(ExceptionExtractMessage::errorAllToString($e));
-        return HttpResponse::response(ExceptionExtractMessage::errorAll($e), $e->getErrorCode(), $e->getMessage());
+        return HttpResponse::response([
+          'content_to_debug' => $e->getContentToDebug(),
+          'errors' => ExceptionExtractMessage::errorAll($e)
+        ], $e->getErrorCode(), $e->getMessage());
       }
       catch (\Exception $e) {
         $this->getLogger('apivuejs')->critical(ExceptionExtractMessage::errorAllToString($e));
