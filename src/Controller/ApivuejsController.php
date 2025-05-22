@@ -131,7 +131,8 @@ class ApivuejsController extends ControllerBase {
             $OldEntity->save();
             return HttpResponse::response([
               'id' => $OldEntity->id(),
-              'json' => $OldEntity->toArray()
+              'json' => $OldEntity->toArray(),
+              'revision_id' => $OldEntity->getRevisionId()
             ]);
           }
           // cest un nouveau contenu, ( les ids pour les entities de
@@ -164,7 +165,8 @@ class ApivuejsController extends ControllerBase {
             $entity->save();
             return HttpResponse::response([
               'id' => $entity->id(),
-              'json' => $entity->toArray()
+              'json' => $entity->toArray(),
+              'revision_id' => $entity->getRevisionId()
             ]);
           }
         }
@@ -196,7 +198,8 @@ class ApivuejsController extends ControllerBase {
           $entity->save();
           return HttpResponse::response([
             'id' => $entity->id(),
-            'json' => $entity->toArray()
+            'json' => $entity->toArray(),
+            'revision_id' => $entity->getRevisionId()
           ]);
         }
         throw new \Exception("Erreur d'execution");
