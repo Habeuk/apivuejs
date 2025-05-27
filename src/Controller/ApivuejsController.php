@@ -132,7 +132,7 @@ class ApivuejsController extends ControllerBase {
             return HttpResponse::response([
               'id' => $OldEntity->id(),
               'json' => $OldEntity->toArray(),
-              'revision_id' => $OldEntity->getRevisionId()
+              "revision_id" => $OldEntity instanceof \Drupal\Core\Entity\ContentEntityInterface ? $OldEntity->getRevisionId() : null
             ]);
           }
           // cest un nouveau contenu, ( les ids pour les entities de
@@ -166,7 +166,7 @@ class ApivuejsController extends ControllerBase {
             return HttpResponse::response([
               'id' => $entity->id(),
               'json' => $entity->toArray(),
-              'revision_id' => $entity->getRevisionId()
+              "revision_id" => $entity instanceof \Drupal\Core\Entity\ContentEntityInterface ? $entity->getRevisionId() : null
             ]);
           }
         }
@@ -199,7 +199,7 @@ class ApivuejsController extends ControllerBase {
           return HttpResponse::response([
             'id' => $entity->id(),
             'json' => $entity->toArray(),
-            'revision_id' => $entity->getRevisionId()
+            "revision_id" => $entity instanceof \Drupal\Core\Entity\ContentEntityInterface ? $entity->getRevisionId() : null
           ]);
         }
         throw new \Exception("Erreur d'execution");
