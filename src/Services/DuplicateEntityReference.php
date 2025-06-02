@@ -786,13 +786,15 @@ class DuplicateEntityReference extends ControllerBase {
              */
             case 'commerce_store_type':
             case 'taxonomy_vocabulary':
-              $ortherEntityConfig = $this->entityTypeManager()->getStorage($setings['target_type']) ? $this->entityTypeManager()->getStorage($setings['target_type'])->load($value['target_id']) : null;
-              if ($ortherEntityConfig) {
-                $subDatas = $setings;
-                $subDatas['target_id'] = $value['target_id'];
-                $subDatas['entity'] = $ortherEntityConfig->toArray();
-                $subDatas['entities'] = [];
-                $datasJson[$k][] = $subDatas;
+              foreach ($vals as $value) {
+                $ortherEntityConfig = $this->entityTypeManager()->getStorage($setings['target_type']) ? $this->entityTypeManager()->getStorage($setings['target_type'])->load($value['target_id']) : null;
+                if ($ortherEntityConfig) {
+                  $subDatas = $setings;
+                  $subDatas['target_id'] = $value['target_id'];
+                  $subDatas['entity'] = $ortherEntityConfig->toArray();
+                  $subDatas['entities'] = [];
+                  $datasJson[$k][] = $subDatas;
+                }
               }
               break;
             /**
