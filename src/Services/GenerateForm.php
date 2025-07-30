@@ -156,6 +156,11 @@ class GenerateForm extends ControllerBase {
           $id = $entity->get($k)->target_id;
           if ($id) {
             $ReferenceEntity = $this->entityTypeManager()->getStorage($field['definition_settings']['target_type'])->load($id);
+            if (!$ReferenceEntity) {
+              $message = "L'entite $id a été supprimé. il doit etre recrer sur le type d'entite : " . $field['definition_settings']['target_type'];
+              \Drupal::logger('apivuejs')->error($message);
+              throw new \ErrorException($message);
+            }
             $field['definition_settings']['bundle_entity_type_id'] = $ReferenceEntity->bundle();
           }
         }
